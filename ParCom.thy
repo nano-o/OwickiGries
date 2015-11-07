@@ -1,16 +1,21 @@
 theory ParCom
-imports Main BExp
+imports Main BExp Star
 begin
+
+text {* Copied and modified theory files from the book "Concrete Semantics", 
+  by Tobias Nipkow and Gerwin Klein *}
+
+section {* Commands, annotated commands, and parallel commands *}
 
 type_synonym assn = "state \<Rightarrow> bool"
 
 datatype com =
-  SKIP                           (" SKIP" 61) |
-  Assign vname aexp              ("_ ::= _/" [1000, 61] 61) |
-  Seq com com                       ("_;;//_"  [60, 61] 60) |
-  If bexp com com              ("IF _/ THEN _/ ELSE _"  [0, 0, 0] 61) |
-  While bexp com           ("WHILE _// DO _"  [0, 61] 61) |
-  Await bexp                     ("AWAIT _" [61] 60)
+  SKIP                          (" SKIP" 61) |
+  Assign vname aexp             ("_ ::= _/" [1000, 61] 61) |
+  Seq com com                   ("_;;//_"  [60, 61] 60) |
+  If bexp com com               ("IF _/ THEN _/ ELSE _"  [0, 0, 0] 61) |
+  While bexp com                ("WHILE _// DO _"  [0, 61] 61) |
+  Await bexp                    ("AWAIT _" [61] 60)
 
 datatype acom =
   SKIP assn                           (" {_}//SKIP" 61) |
@@ -43,5 +48,27 @@ abbreviation true where
 
 term
 "|| [inc true, inc true]"
+
+section {* Small-step semantics *}
+
+inductive
+  small_step :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>" 55)
+where
+Assign:  "(x ::= a, s) \<rightarrow> (SKIP, s(x := aval a s))" |
+
+Seq1:    "(SKIP;;c\<^sub>2,s) \<rightarrow> (c\<^sub>2,s)" |
+Seq2:    "(c\<^sub>1,s) \<rightarrow> (c\<^sub>1',s') \<Longrightarrow> (c\<^sub>1;;c\<^sub>2,s) \<rightarrow> (c\<^sub>1';;c\<^sub>2,s')" |
+
+IfTrue:  "bval b s \<Longrightarrow> (IF b THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>1,s)" |
+IfFalse: "\<not>bval b s \<Longrightarrow> (IF b THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>2,s)" |
+
+While:   "(WHILE b DO c,s) \<rightarrow>
+            (IF b THEN c;; WHILE b DO c ELSE SKIP,s)" |
+
+Await:   "bval b s \<Longrightarrow> (AWAIT b, s) \<rightarrow> (SKIP, s)"
+
+abbreviation
+  small_steps :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
+where "x \<rightarrow>* y == star small_step x y"
 
 end
