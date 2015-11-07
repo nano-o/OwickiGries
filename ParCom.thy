@@ -3,7 +3,8 @@ imports Main BExp Star
 begin
 
 text {* Copied and modified theory files from the book "Concrete Semantics", 
-  by Tobias Nipkow and Gerwin Klein *}
+  by Tobias Nipkow and Gerwin Klein, and the paper Owicki/Gries in Isabelle/HOL, 
+  by Tobias Nipkow and Leonor Prensa Nieto *}
 
 section {* Commands, annotated commands, and parallel commands *}
 
@@ -37,8 +38,14 @@ term
 "{P} AWAIT (Bc True) ,,
 {Q} ''x'' ::= N 3"
 
+datatype par_acom =
+  APar "acom list" ("|| _")
+
 datatype par_com =
-  Par "acom list" ("|| _")
+  Par "com list"
+
+fun strip_acom :: "par_acom \<Rightarrow> par_com" where
+  "strip_acom (APar cs) = Par (map strip cs)"
 
 abbreviation inc where
   "inc P \<equiv> {P} ''x'' ::= Plus (V ''x'') (N 1)"
@@ -70,5 +77,9 @@ Await:   "bval b s \<Longrightarrow> (AWAIT b, s) \<rightarrow> (SKIP, s)"
 abbreviation
   small_steps :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
 where "x \<rightarrow>* y == star small_step x y"
+
+inductive
+  par_small_step :: "par_com \<times> state \<Rightarrow> par_com \<times> state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>\<parallel>" 55) where
+  "\<lbrakk>i \<in> {0..length cs}; (cs!i,s) \<rightarrow> (c,t)\<rbrakk> \<Longrightarrow> (Par cs, s) \<rightarrow>\<^sub>\<parallel> (Par (cs[i := c]), t)"
 
 end
