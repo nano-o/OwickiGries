@@ -19,11 +19,13 @@ datatype com =
   Await bexp                    ("AWAIT _" [61] 60)
 
 datatype acom =
+  -- {* Annotated commands carry a precondition *}
   SKIP assn                           (" {_}//SKIP" 61) |
   Assign assn vname aexp              (" {_}//(_ ::= _/)" [0, 1000, 61] 61) |
   Seq acom acom                       ("_,,//_"  [60, 61] 60) |
   If assn bexp acom acom              ("{_}//(IF _/ THEN _/ ELSE _)"  [0, 0, 0, 0] 61) |
-  While assn bexp assn acom           ("({_}//WHILE _//DO ({_}//_))"  [0, 0, 0, 61] 61) | 
+  While assn bexp assn acom           ("({_}//WHILE _//DO ({_}//_))"  [0, 0, 0, 61] 61) |
+    -- {* On top of a precondition, loops carry a loop invariant *}
   Await assn bexp                     ("{_}//(AWAIT _)" [0, 61] 60)
 
 fun strip where
@@ -39,13 +41,17 @@ term
 {Q} ''x'' ::= N 3"
 
 datatype par_acom =
-  APar "acom list" ("|| _")
+  APar "(acom \<times> assn) list" ("|| _")
+-- {* An annotated parallel command is a list pairs consisting of 
+  an annotated commands and its postcondition *}
 
 datatype par_com =
   Par "com list"
 
 fun strip_acom :: "par_acom \<Rightarrow> par_com" where
-  "strip_acom (APar cs) = Par (map strip cs)"
+  "strip_acom (APar cs) = Par (map (strip o fst) cs)"
+
+subsection {* A trivial example *}
 
 abbreviation inc where
   "inc P \<equiv> {P} ''x'' ::= Plus (V ''x'') (N 1)"
@@ -54,7 +60,7 @@ abbreviation true where
   "true \<equiv> \<lambda> s . True"
 
 term
-"|| [inc true, inc true]"
+"|| [(inc true, true), (inc true, true)]"
 
 section {* Small-step semantics *}
 
@@ -76,10 +82,17 @@ Await:   "bval b s \<Longrightarrow> (AWAIT b, s) \<rightarrow> (SKIP, s)"
 
 abbreviation
   small_steps :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
-where "x \<rightarrow>* y == star small_step x y"
+where "x \<rightarrow>* y \<equiv> star small_step x y"
 
 inductive
   par_small_step :: "par_com \<times> state \<Rightarrow> par_com \<times> state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>\<parallel>" 55) where
   "\<lbrakk>i \<in> {0..length cs}; (cs!i,s) \<rightarrow> (c,t)\<rbrakk> \<Longrightarrow> (Par cs, s) \<rightarrow>\<^sub>\<parallel> (Par (cs[i := c]), t)"
+
+abbreviation
+  par_small_steps :: "par_com * state \<Rightarrow> par_com * state \<Rightarrow> bool" (infix "\<rightarrow>*\<^sub>\<parallel>" 55)
+where "x \<rightarrow>*\<^sub>\<parallel> y \<equiv> star par_small_step x y"
+
+section {* Proof system for annotated commands *}
+
 
 end
