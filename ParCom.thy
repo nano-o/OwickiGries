@@ -28,6 +28,14 @@ datatype acom =
     -- {* On top of a precondition, loops carry a loop invariant *}
   Await assn bexp                     ("{_}//(AWAIT _)" [0, 61] 60)
 
+fun pre where 
+  "pre ({P} SKIP) = P"
+| "pre ({P} x ::= a) = P"
+| "pre (c1 ,, c2) = pre c1"
+| "pre ({P} IF b THEN c1 ELSE c2) = P"
+| "pre ({P} WHILE b DO {I} c) = P"
+| "pre ({P} AWAIT b) = P"
+
 fun strip where
   "strip ({P} SKIP) = SKIP" 
 | "strip ({P} x ::= y) = x ::= y"
@@ -94,5 +102,19 @@ where "x \<rightarrow>*\<^sub>\<parallel> y \<equiv> star par_small_step x y"
 
 section {* Proof system for annotated commands *}
 
+abbreviation state_subst :: "state \<Rightarrow> aexp \<Rightarrow> vname \<Rightarrow> state"
+  ("_[_'/_]" [1000,0,0] 999)
+where "s[a/x] \<equiv> s(x := aval a s)"
+
+inductive acom_rules :: "acom \<Rightarrow> assn \<Rightarrow> bool"  ("\<turnstile> ((_)/ {(1_)})" 50) where
+  "\<turnstile> {Q} SKIP {Q}"
+| "\<lbrakk>\<And> s . P s \<Longrightarrow> Q (s[a/x])\<rbrakk> \<Longrightarrow> \<turnstile> {P} x ::= a {Q}"
+| "\<lbrakk>\<turnstile> c1 {pre c2}; \<turnstile> c2 {Q}\<rbrakk> \<Longrightarrow> \<turnstile> c1,, c2 {Q}"
+| "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> (pre c1) s; \<And> s . P s \<and> \<not> bval b s \<Longrightarrow> (pre c2) s; \<turnstile> c1 {Q}; \<turnstile> c2 {Q}\<rbrakk> 
+    \<Longrightarrow> \<turnstile> {P} IF b THEN c1 ELSE c2 {Q}"
+| "\<lbrakk>\<And> s . P s \<Longrightarrow> I s; \<turnstile> c {I}; \<And> s . I s \<and> \<not> bval b s \<Longrightarrow> Q s; \<And> s . I s \<and> bval b s \<Longrightarrow> (pre c) s\<rbrakk> 
+    \<Longrightarrow> \<turnstile> {P} WHILE b DO {I} c {Q}"
+| "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<turnstile> {P} AWAIT b {Q}"
+| "\<lbrakk>\<turnstile> c {Q}; \<And> s . Q' s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<turnstile> c{ Q'}"
 
 end
