@@ -53,6 +53,9 @@ datatype par_acom =
 -- {* An annotated parallel command is a list pairs consisting of 
   an annotated commands and its postcondition *}
 
+abbreviation post where "post \<equiv> snd"
+abbreviation com where "com \<equiv> fst"
+
 datatype par_com =
   Par "com list"
 
@@ -115,7 +118,7 @@ where "x \<rightarrow>* y \<equiv> star small_step x y"
 
 inductive
   par_small_step :: "par_acom \<times> state \<Rightarrow> par_acom \<times> state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>\<parallel>" 55) where
-  "\<lbrakk>i \<in> {0..length cs}; (fst (cs!i),s) \<rightarrow> (c,t)\<rbrakk> 
+  "\<lbrakk>i \<in> {0..length cs}; (fst (cs!i),s) \<rightarrow> (c,t)\<rbrakk>
     \<Longrightarrow> (APar cs, s) \<rightarrow>\<^sub>\<parallel> (APar (cs[i := (c, snd (cs!i))]), t)"
 
 abbreviation
@@ -138,5 +141,32 @@ inductive acom_rules :: "acom \<Rightarrow> assn \<Rightarrow> bool"  ("\<turnst
     \<Longrightarrow> \<turnstile> {P} WHILE b DO {I} c {Q}"
 | "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<turnstile> {P} AWAIT b {Q}"
 | "\<lbrakk>\<turnstile> c {Q}; \<And> s . Q' s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<turnstile> c{ Q'}"
+
+fun atomics :: "acom \<Rightarrow> (assn \<times> vname \<times> aexp) set" where
+  -- {* The set of assignments in a command, described by a tripe (P, x, a)*}
+  "atomics ({P} SKIP) = {}"
+| "atomics ({P} x ::= a) =  {(P, x, a)}"
+| "atomics (c1,, c2) = atomics c1 \<union> atomics c2"
+| "atomics ({P} IF b THEN c1 ELSE c2) = atomics c1 \<union> atomics c2"
+| "atomics ({P} WHILE b DO {I} c) = atomics c"
+| "atomics ({P} AWAIT b) = {}"
+
+fun assertions :: "acom \<Rightarrow> assn set" where
+  "assertions ({P} SKIP) = {P}"
+| "assertions ({P} x ::= a) =  {P}"
+| "assertions (c1,, c2) = assertions c1 \<union> assertions c2"
+| "assertions ({P} IF b THEN c1 ELSE c2) = {P} \<union> assertions c1 \<union> assertions c2"
+| "assertions ({P} WHILE b DO {I} c) =  {P, I} \<union> assertions c"
+| "assertions ({P} AWAIT b) = {P}"
+
+definition interfree where
+  -- {* c2 does not interfere with c1 when Q and all the assertions in c1 are invariant under c2 *}
+  "interfree c1 Q c2 \<equiv> \<forall> (P,x,a) \<in> atomics c2 . 
+      \<turnstile> {\<lambda> s. P s \<and> Q s} x ::= a {Q}
+      \<and> (\<forall> R \<in> assertions c1 . \<turnstile> {\<lambda> s. P s \<and> R s} x ::= a {R})"
+
+definition INTERFREE where
+  "INTERFREE cs \<equiv> \<forall> i \<in> {0..length cs} . \<forall> j \<in> {0..length cs} . 
+    i \<noteq> j \<longrightarrow> interfree (fst (cs!i)) (snd (cs!i)) (fst (cs!j))"
 
 end
