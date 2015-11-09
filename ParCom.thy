@@ -72,6 +72,9 @@ term
 
 section {* Small-step semantics *}
 
+locale small_step_com 
+begin
+
 inductive
   small_step :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>" 55)
 where
@@ -88,16 +91,35 @@ While:   "(WHILE b DO c,s) \<rightarrow>
 
 Await:   "bval b s \<Longrightarrow> (AWAIT b, s) \<rightarrow> (SKIP, s)"
 
+end
+
+inductive
+  small_step :: "acom * state \<Rightarrow> acom * state \<Rightarrow> bool" (infix "\<rightarrow>" 55)
+where
+Assign:  "({P} x ::= a, s) \<rightarrow> ({P} SKIP, s(x := aval a s))" |
+
+Seq1:    "({P} SKIP,,c\<^sub>2,s) \<rightarrow> (c\<^sub>2,s)" |
+Seq2:    "(c\<^sub>1,s) \<rightarrow> (c\<^sub>1',s') \<Longrightarrow> (c\<^sub>1,,c\<^sub>2,s) \<rightarrow> (c\<^sub>1',,c\<^sub>2,s')" |
+
+IfTrue:  "bval b s \<Longrightarrow> ({P} IF b THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>1,s)" |
+IfFalse: "\<not>bval b s \<Longrightarrow> ({P} IF b THEN c\<^sub>1 ELSE c\<^sub>2,s) \<rightarrow> (c\<^sub>2,s)" |
+
+While:   "bval b s \<Longrightarrow> ({P} WHILE b DO {I} c,s) \<rightarrow>
+            (c,, {I} WHILE b DO {I} c, s)" |
+
+Await:   "bval b s \<Longrightarrow> ({P} AWAIT b, s) \<rightarrow> ({P} SKIP, s)"
+
 abbreviation
-  small_steps :: "com * state \<Rightarrow> com * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
+  small_steps :: "acom * state \<Rightarrow> acom * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
 where "x \<rightarrow>* y \<equiv> star small_step x y"
 
 inductive
-  par_small_step :: "par_com \<times> state \<Rightarrow> par_com \<times> state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>\<parallel>" 55) where
-  "\<lbrakk>i \<in> {0..length cs}; (cs!i,s) \<rightarrow> (c,t)\<rbrakk> \<Longrightarrow> (Par cs, s) \<rightarrow>\<^sub>\<parallel> (Par (cs[i := c]), t)"
+  par_small_step :: "par_acom \<times> state \<Rightarrow> par_acom \<times> state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>\<parallel>" 55) where
+  "\<lbrakk>i \<in> {0..length cs}; (fst (cs!i),s) \<rightarrow> (c,t)\<rbrakk> 
+    \<Longrightarrow> (APar cs, s) \<rightarrow>\<^sub>\<parallel> (APar (cs[i := (c, snd (cs!i))]), t)"
 
 abbreviation
-  par_small_steps :: "par_com * state \<Rightarrow> par_com * state \<Rightarrow> bool" (infix "\<rightarrow>*\<^sub>\<parallel>" 55)
+  par_small_steps :: "par_acom * state \<Rightarrow> par_acom * state \<Rightarrow> bool" (infix "\<rightarrow>*\<^sub>\<parallel>" 55)
 where "x \<rightarrow>*\<^sub>\<parallel> y \<equiv> star par_small_step x y"
 
 section {* Proof system for annotated commands *}
@@ -110,9 +132,9 @@ inductive acom_rules :: "acom \<Rightarrow> assn \<Rightarrow> bool"  ("\<turnst
   "\<turnstile> {Q} SKIP {Q}"
 | "\<lbrakk>\<And> s . P s \<Longrightarrow> Q (s[a/x])\<rbrakk> \<Longrightarrow> \<turnstile> {P} x ::= a {Q}"
 | "\<lbrakk>\<turnstile> c1 {pre c2}; \<turnstile> c2 {Q}\<rbrakk> \<Longrightarrow> \<turnstile> c1,, c2 {Q}"
-| "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> (pre c1) s; \<And> s . P s \<and> \<not> bval b s \<Longrightarrow> (pre c2) s; \<turnstile> c1 {Q}; \<turnstile> c2 {Q}\<rbrakk> 
+| "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> (pre c1) s; \<And> s . P s \<and> \<not> bval b s \<Longrightarrow> (pre c2) s; \<turnstile> c1 {Q}; \<turnstile> c2 {Q}\<rbrakk>
     \<Longrightarrow> \<turnstile> {P} IF b THEN c1 ELSE c2 {Q}"
-| "\<lbrakk>\<And> s . P s \<Longrightarrow> I s; \<turnstile> c {I}; \<And> s . I s \<and> \<not> bval b s \<Longrightarrow> Q s; \<And> s . I s \<and> bval b s \<Longrightarrow> (pre c) s\<rbrakk> 
+| "\<lbrakk>\<And> s . P s \<Longrightarrow> I s; \<turnstile> c {I}; \<And> s . I s \<and> \<not> bval b s \<Longrightarrow> Q s; \<And> s . I s \<and> bval b s \<Longrightarrow> (pre c) s\<rbrakk>
     \<Longrightarrow> \<turnstile> {P} WHILE b DO {I} c {Q}"
 | "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<turnstile> {P} AWAIT b {Q}"
 | "\<lbrakk>\<turnstile> c {Q}; \<And> s . Q' s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<turnstile> c{ Q'}"
