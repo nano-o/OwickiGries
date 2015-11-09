@@ -23,6 +23,11 @@ abbreviation
   small_steps :: "(acom option) * state \<Rightarrow> (acom option) * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
 where "x \<rightarrow>* y == star small_step x y"
 
+
+abbreviation
+  small_steps_tr :: "(com option) * state \<Rightarrow> (com option) * state \<Rightarrow> bool" (infix "\<rightarrow>*\<^sub>t\<^sub>r" 55)
+where "x \<rightarrow>*\<^sub>t\<^sub>r y == star small_step x y"
+
 subsection{* Executability *}
 
 code_pred small_step .

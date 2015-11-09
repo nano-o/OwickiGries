@@ -4,7 +4,11 @@ begin
 
 definition
 hoare_valid :: "acom \<Rightarrow> assn \<Rightarrow> bool" ("\<Turnstile> (_)/ {(1_)}" 50) where
-"\<Turnstile> c {Q} = (\<forall>s t. (Some(c), s) \<rightarrow>* (None, t)  \<longrightarrow>  Q t)"
+"\<Turnstile> c {Q} \<equiv> (\<forall>s t. (pre c) s \<and> (Some(c), s) \<rightarrow>* (None, t)  \<longrightarrow>  Q t)"
+
+definition
+hoare_valid_tr :: "assn \<Rightarrow> com \<Rightarrow> assn \<Rightarrow> bool" ("\<Turnstile>\<^sub>t\<^sub>r {(1_)}/ (_)/ {(1_)}" 50) where
+"\<Turnstile>\<^sub>t\<^sub>r {P} c {Q} \<equiv> (\<forall>s t. P s \<and> (Some(c), s) \<rightarrow>*\<^sub>t\<^sub>r (None, t)  \<longrightarrow>  Q t)"
 
 abbreviation state_subst :: "state \<Rightarrow> aexp \<Rightarrow> vname \<Rightarrow> state"
   ("_[_'/_]" [1000,0,0] 999)
@@ -13,17 +17,17 @@ where "s[a/x] == s(x := aval a s)"
 inductive
   hoare :: "acom \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile> ((_)/ {(1_)})" 50)
 where
-Assign: "\<lbrakk>\<forall>s. P(s[a/x])\<rbrakk> \<Longrightarrow> \<turnstile> ({P} x ::= a) {P}"  |
+Assign: "\<turnstile> ({\<lambda>s. P(s[a/x])} x ::= a) {P}"  |
 
 Seq: "\<lbrakk> \<turnstile> c0 {pre(c1)}; \<turnstile> c1 {Q} \<rbrakk> \<Longrightarrow> \<turnstile> (c0;; c1) {Q}"  |
 
-If: "\<lbrakk>\<forall>s. P s \<and> bval b s \<and> \<turnstile> c1 {Q}; \<forall> t.  P t \<and> \<not> bval b t \<and> \<turnstile> c2 {Q}  \<rbrakk>
+If: "\<lbrakk> \<turnstile> c1 {Q}; \<forall>s. P s \<and> bval b s \<longrightarrow> pre c1 s; \<turnstile> c2 {Q}; \<forall>s. P s \<and> \<not> bval b s \<longrightarrow> pre c2 s\<rbrakk>
     \<Longrightarrow> \<turnstile> ({P} IF b THEN c1 ELSE c2 FI) {Q}"  |
 
 While: "\<lbrakk>\<forall>s. P s \<and> bval b s \<longrightarrow> I s; \<turnstile> c {I}\<rbrakk> \<Longrightarrow>
         \<turnstile> ({P} WHILE b INV I DO c OD) {\<lambda>s. I s \<and> \<not>bval b s}"  |
 
-Wait: "\<turnstile> ({P} WAIT b END) {\<lambda>s. P s \<and> bval b s}"|
+Wait: "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<turnstile> ({P} WAIT b END) {Q}"|
 
 Conseq:"\<lbrakk> \<turnstile> c {Q}; \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile> c {Q'}"
 
@@ -48,6 +52,8 @@ Wait:"\<turnstile>\<^sub>t\<^sub>r {P} (WAIT b END) {\<lambda>s. P s \<and> bval
 
 conseq: "\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>t\<^sub>r {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk>
         \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P'} c {Q'}"
+
+lemma tr_sound: "\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {P} c {Q}"
 
 lemma While':
 assumes "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. P s \<and> bval b s} c {I}" and "\<forall>s. I s \<and> \<not> bval b s \<longrightarrow> Q s"
