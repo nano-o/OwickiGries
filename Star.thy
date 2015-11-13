@@ -8,6 +8,14 @@ for r where
 refl:  "star r x x" |
 step:  "r x y \<Longrightarrow> star r y z \<Longrightarrow> star r x z"
 
+thm star.induct
+
+lemma star_induct_2:
+  assumes "star r x y"
+  and "\<And> x . P x x" 
+  and "\<And> x y z . \<lbrakk>star r x y; P x y; r y z\<rbrakk> \<Longrightarrow> P x z"
+  shows "P x y"  sorry
+
 hide_fact (open) refl step  --"names too generic"
 
 lemma star_trans:

@@ -59,6 +59,7 @@ proof(induction rule:hoare.induct)
   case (Assign P a x)
     show ?case by (simp add: hoare_tr.Assign)
 next
+  print_cases
   case (Seq C0 C1 Q)
     show ?case using Seq.IH(1) Seq.IH(2) hoare_tr.Seq by auto
 next
@@ -82,7 +83,13 @@ qed
 lemma vc_complete:"\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<exists>C. (strip C = c) \<and> (\<turnstile> C {Q}) \<and> (\<forall>s. P s \<longrightarrow> pre (C) s)"
 proof(induction rule:hoare_tr.induct)
   case (Assign P a x)
-    show ?case by force
+    show ?case (is "\<exists> C . ?P C")
+    proof -
+      let ?pre = "\<lambda>s. P (s[a/x])"
+      let ?C = "{?pre} x ::= a"
+      have "?P ?C" by simp
+      thus ?thesis by blast
+    qed
 next
   case (Seq P c1 Q c2 R)
     show ?case by (metis Conseq Seq.IH(1) Seq.IH(2) hoare.Seq pre.simps(2) strip.simps(2))
@@ -92,7 +99,7 @@ next
     obtain C2::acom where 3:"strip C2 = c2" and 4:"\<turnstile> C2 {Q}" and 5:"(\<forall>s. P s \<and> \<not> bval b s \<longrightarrow> pre C2 s)" using If.IH(2) by auto
     obtain C::acom where 6:"C = {P} IF b THEN C1 ELSE C2 FI" by simp
     have "\<turnstile> C {Q}" by (simp add:1 2 4 5 6)
-    thus ?case using 0 3 6 by force 
+    thus ?case using 0 3 6 by force
 next
   case (While P I b c)
     assume 1:"\<forall>s. P s \<longrightarrow> I s"
@@ -114,25 +121,85 @@ next
   thus ?case using 3 6 by blast
 qed
 
-lemma hoare_sound:"\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
-proof(induction rule:hoare.induct)
-  case (Assign P a x)
-    fix s t
-    assume 0:"(\<lambda>s. P (s[a/x])) s" and 1:"(Some({\<lambda>s. P (s[a/x])} x ::= a), s) \<rightarrow>* (None, t)" 
-    have "t = s(x := aval a s)" using 1 small_step.Assign star.step star.refl deterministic
-    
+lemma none_final:
+  assumes "(None, s) \<rightarrow>* (c, t)"
+  shows "c = None" and "s = t"
+proof -
+  from assms have "c = None \<and> s = t"
+  proof (induction "(None::(acom option), s)" "(c, t)" rule:star.induct)
+    case (step y)
+    from step.hyps(1) have "False"
+    by (induct "(None::(acom option),s)" y rule:small_step.induct)
+    thus ?case by auto
+  next
+    case refl
+    thus ?case by simp
+  qed
+  thus "c = None" and "s = t" by auto
 qed
 
-lemma vc_ssound:"\<lbrakk>(Some c, s) \<rightarrow>* (ro, t); pre(c) s; \<turnstile> c {Q}\<rbrakk> \<Longrightarrow> case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t"
-proof(induction c)
-  case (Assign P x a)
-    assume 1:"Some c = ro" and 2:"s = t" and 3:"pre c s" and 4:"\<turnstile> c {Q}"
-    {
-      assume 5:"ro = None"
-      have "Q t"
-    
-    
+lemma final_det:
+  assumes "(c,s) \<rightarrow>* (None,t)"
+  and "(c,s) \<rightarrow>* (None, t')"
+  shows "t = t'"
+using assms
+proof (induct "(c,s)" "(None::(acom option), t)" arbitrary:c s rule:star.induct) 
+  case refl thus ?case by (simp add: none_final(2))  
+next
+  case step thus ?case using deterministic
+    by (metis (no_types, hide_lams) PairE none_final(2) star.simps)
 qed
+
+lemma 
+  assumes "(Some (strip ac),s) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
+  shows "(Some ac, s) \<rightarrow>* (None, t)"
+  using assms
+proof (induct ac)
+  case (AAssign P x a) thus ?case 
+
+lemma tr_hoare_sound:
+  "\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {P} c {Q}" 
+proof (induct rule:hoare_tr.induct)
+  case (Assign P a x)
+  { fix s
+    have "(Some (x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r* (None, s[a/x])" by simp }
+  note 1 = this
+  { fix s t
+    assume 1:"P (s[a/x])" and 2:"(Some (x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
+    from 2 have "(Some (x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r (None, t)" using none_final 
+    have "P t"
+  thus ?case apply (auto simp add:hoare_valid_tr_def)
+
+lemma tr_valid_to_valid:
+  assumes "\<Turnstile>\<^sub>t\<^sub>r {pre ac} strip ac {Q}" and "\<turnstile> ac {Q}"
+  shows "\<Turnstile> ac {Q}"  sorry
+
+lemma hoare_sound:
+  assumes "\<turnstile> C {Q}"
+  shows "\<Turnstile> C {Q}"
+proof -
+  from assms obtain c where 1:"\<turnstile>\<^sub>t\<^sub>r {pre C} c {Q}" and 2:"strip C = c" using vc_equal by auto
+  from 1 have "\<Turnstile>\<^sub>t\<^sub>r {pre C} c {Q}" using tr_hoare_sound by simp
+  with tr_valid_to_valid 2 assms show ?thesis by blast
+qed
+
+
+lemma vc_ssound:
+  assumes "(Some c, s) \<rightarrow>* (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
+  shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" 
+using assms
+thm star.induct
+proof(induct "(Some c, s)" "(ro, t)" arbitrary:c rule:star.induct)
+  case refl
+  thus ?case by auto
+next
+  print_cases
+  case (step y)
+  { assume 1:"fst y = None"
+    from 1 have 2:"ro = None" and 3:"snd y = t" 
+      using none_final step.hyps(2) by (metis prod.exhaust_sel)+
+    have "Q (snd y)" using step.prems step.hyps(1) (* For this we need the soundness of the hoare rules*)
+    oops
 
 fun asubst:: "aexp \<Rightarrow> aexp \<Rightarrow> vname\<Rightarrow> aexp" where  
 "asubst (N n) a x  = N n"|
