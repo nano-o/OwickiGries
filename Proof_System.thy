@@ -17,7 +17,7 @@ where "s[a/x] == s(x := aval a s)"
 inductive
   hoare :: "acom \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile> ((_)/ {(1_)})" 50)
 where
-Assign: "\<turnstile> ({\<lambda>s. P(s[a/x])} x ::= a) {P}"  |
+Assign: "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (s[a/x])\<rbrakk> \<Longrightarrow> \<turnstile> ({P} x ::= a) {Q}"  |
 
 Seq: "\<lbrakk> \<turnstile> c0 {pre(c1)}; \<turnstile> c1 {Q} \<rbrakk> \<Longrightarrow> \<turnstile> (c0;; c1) {Q}"  |
 
@@ -38,7 +38,7 @@ lemmas [intro!] = hoare.Assign hoare.Seq hoare.If
 inductive
   hoare_tr :: "assn \<Rightarrow> com \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile>\<^sub>t\<^sub>r ({(1_)}/ (_)/ {(1_)})" 50)
 where
-Assign:  "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. P(s[a/x])} x ::= a {P}"  |
+Assign:  "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (s[a/x])\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} x ::= a {Q}"  |
 
 Seq: "\<lbrakk> \<turnstile>\<^sub>t\<^sub>r {P} c1 {Q};  \<turnstile>\<^sub>t\<^sub>r {Q} c2 {R} \<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} c1;;c2 {R}"  |
 
@@ -57,7 +57,7 @@ lemma vc_equal:
   "\<turnstile> C {Q} \<Longrightarrow> \<exists>c. \<turnstile>\<^sub>t\<^sub>r {pre C} c {Q} \<and> strip C = c"
 proof(induction rule:hoare.induct)
   case (Assign P a x)
-    show ?case by (simp add: hoare_tr.Assign)
+    show ?case by (simp add: Assign.hyps hoare_tr.Assign) 
 next
   print_cases
   case (Seq C0 C1 Q)
@@ -82,14 +82,10 @@ qed
 
 lemma vc_complete:"\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<exists>C. (strip C = c) \<and> (\<turnstile> C {Q}) \<and> (\<forall>s. P s \<longrightarrow> pre (C) s)"
 proof(induction rule:hoare_tr.induct)
-  case (Assign P a x)
-    show ?case (is "\<exists> C . ?P C")
-    proof -
-      let ?pre = "\<lambda>s. P (s[a/x])"
-      let ?C = "{?pre} x ::= a"
-      have "?P ?C" by simp
-      thus ?thesis by blast
-    qed
+  case (Assign P Q a x)
+    obtain C::acom where 1:"C = {P} x ::= a" by simp
+    with this have "\<turnstile> C {Q}" by (simp add: Assign.hyps)
+    thus ?case using 1 by force
 next
   case (Seq P c1 Q c2 R)
     show ?case by (metis Conseq Seq.IH(1) Seq.IH(2) hoare.Seq pre.simps(2) strip.simps(2))
@@ -121,43 +117,9 @@ next
   thus ?case using 3 6 by blast
 qed
 
-lemma none_final:
-  assumes "(None, s) \<rightarrow>* (c, t)"
-  shows "c = None" and "s = t"
-proof -
-  from assms have "c = None \<and> s = t"
-  proof (induction "(None::(acom option), s)" "(c, t)" rule:star.induct)
-    case (step y)
-    from step.hyps(1) have "False"
-    by (induct "(None::(acom option),s)" y rule:small_step.induct)
-    thus ?case by auto
-  next
-    case refl
-    thus ?case by simp
-  qed
-  thus "c = None" and "s = t" by auto
-qed
 
-lemma final_det:
-  assumes "(c,s) \<rightarrow>* (None,t)"
-  and "(c,s) \<rightarrow>* (None, t')"
-  shows "t = t'"
-using assms
-proof (induct "(c,s)" "(None::(acom option), t)" arbitrary:c s rule:star.induct) 
-  case refl thus ?case by (simp add: none_final(2))  
-next
-  case step thus ?case using deterministic
-    by (metis (no_types, hide_lams) PairE none_final(2) star.simps)
-qed
 
-lemma 
-  assumes "(Some (strip ac),s) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
-  shows "(Some ac, s) \<rightarrow>* (None, t)"
-  using assms
-proof (induct ac)
-  case (AAssign P x a) thus ?case 
-
-lemma tr_hoare_sound:
+(*lemma tr_hoare_sound:
   "\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {P} c {Q}" 
 proof (induct rule:hoare_tr.induct)
   case (Assign P a x)
@@ -168,19 +130,65 @@ proof (induct rule:hoare_tr.induct)
     assume 1:"P (s[a/x])" and 2:"(Some (x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
     from 2 have "(Some (x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r (None, t)" using none_final 
     have "P t"
-  thus ?case apply (auto simp add:hoare_valid_tr_def)
+  thus ?case apply (auto simp add:hoare_valid_tr_def)*)
 
-lemma tr_valid_to_valid:
-  assumes "\<Turnstile>\<^sub>t\<^sub>r {pre ac} strip ac {Q}" and "\<turnstile> ac {Q}"
-  shows "\<Turnstile> ac {Q}"  sorry
+
+(*lemma hoare_sound:
+  assumes "\<turnstile> C {Q}"
+  shows "\<Turnstile> C {Q}"
+using assms
+proof(induction rule:hoare.induct)
+  case (Assign P Q a x)
+    {
+      fix s t
+      assume 1:"P s" and 2:"(Some({P} x ::= a), s) \<rightarrow>* (None, t)" and 3:"\<forall>s. P s \<longrightarrow> Q (s[a/x])"
+      have "t = s(x := aval a s)" using 2 final_det by blast 
+      hence "Q t" using 1 Assign.hyps by blast
+    }
+    thus ?case by (metis Assign.hyps hoare_valid_def pre.simps(1)) 
+next
+  case (Seq c0 c1 Q)
+  assume 1:"\<Turnstile> c0 {pre c1}" and 2:"\<Turnstile> c1 {Q}"
+  have 3:"(\<forall>s t. ((pre c0) s \<and> (Some(c0), s) \<rightarrow>* (None, t))  \<longrightarrow>  (pre c1) t)" using 1 by (simp add: hoare_valid_def) 
+  have 4:"(\<forall>s t. ((pre c1) s \<and> (Some(c1), s) \<rightarrow>* (None, t))  \<longrightarrow>  Q t)" using 2 by (simp add: hoare_valid_def) 
+  have 5:"((pre c0) s \<and> (Some(c0), s) \<rightarrow>* (None, t))  \<longrightarrow>  (pre c1) t" using 3 by blast
+  have 5:"((pre c1) t \<and> (Some(c1), t) \<rightarrow>* (None, r))  \<longrightarrow>  Q r" using 4 by blast
+  hence "((pre c0) s \<and> (Some(c0;; c1), s) \<rightarrow>* (Some(c1), t))  \<longrightarrow>  (pre c1) t"
+
+(*definition
+hoare_valid :: "acom \<Rightarrow> assn \<Rightarrow> bool" ("\<Turnstile> (_)/ {(1_)}" 50) where
+"\<Turnstile> c {Q} \<equiv> (\<forall>s t. ((pre c) s \<and> (Some(c), s) \<rightarrow>* (None, t))  \<longrightarrow>  Q t)"*)
+qed*)
+
+
+lemma Strong_Soundness: "\<lbrakk>(Some c, s) \<rightarrow>* (co, t); pre c s; \<turnstile> c {q}\<rbrakk>
+\<Longrightarrow> if co = None then q t else pre (the co) t"
+apply(force )
+done
 
 lemma hoare_sound:
   assumes "\<turnstile> C {Q}"
   shows "\<Turnstile> C {Q}"
-proof -
-  from assms obtain c where 1:"\<turnstile>\<^sub>t\<^sub>r {pre C} c {Q}" and 2:"strip C = c" using vc_equal by auto
-  from 1 have "\<Turnstile>\<^sub>t\<^sub>r {pre C} c {Q}" using tr_hoare_sound by simp
-  with tr_valid_to_valid 2 assms show ?thesis by blast
+apply (unfold hoare_valid_def)
+apply clarify
+apply(drule Strong_Soundness)
+apply simp_all
+proof-
+  show "\<And>s. pre C s \<Longrightarrow> \<turnstile> C {Q} " using assms by simp 
+qed
+
+lemma vc_ssound:"\<lbrakk>(Some c, s) \<rightarrow>* (ro, t); pre(c) s; \<turnstile> c {Q}\<rbrakk> \<Longrightarrow> case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t"
+using assms
+proof(induction "(Some c, s)" "(ro, t)" rule:star.induct)
+  case refl
+    thus ?case by auto
+next
+  case (step y)
+  thus ?case
+  proof(induct "(Some c, s)" y arbitrary:c s t Q rule:small_step.induct)
+    case (Assign P x a s t Q)
+    assume 0:"(None, s[a/x]) \<rightarrow>* (ro, t)"
+    have "ro = None"
 qed
 
 
@@ -213,9 +221,6 @@ fun post :: "acom \<Rightarrow> assn \<Rightarrow> assn" where
   (\<lambda>s. post C1 (\<lambda>s. P s \<and> bval b s) s \<or> post C2 (\<lambda>s. P s \<and> \<not>bval b s) s)"|
 "post ({P} WHILE b INV I DO C OD) P = (\<lambda>s. I s \<and> \<not>bval b s)"|
 "post ({P} WAIT b END) P = (\<lambda>s. P s \<and> bval b s)"
-
-fun the::"acom option \<Rightarrow> acom" where
-"the (Some c) = c"
 
 fun com::"(acom option \<times> assn) \<Rightarrow> acom option" where
 "com (Some c, Q) = (Some c)"|

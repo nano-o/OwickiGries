@@ -78,5 +78,4 @@ inductive_cases PSeqE[elim]: "((c1,, c2), s) \<rightarrow>\<^sub>P ct"
 inductive_cases PIfE[elim!]: "((IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>P ct"
 inductive_cases PWhileE[elim]: "((WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>P ct"
 
-
 end
