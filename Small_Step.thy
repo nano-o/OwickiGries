@@ -553,9 +553,16 @@ proof(induct "(Some c, s)" t arbitrary:c s rule:big_step_tr.induct)
   case (Assign x a s) 
     thus ?case using big_step.Assign strip.simps(1) by blast 
 next
-  case (Seq c0 s t c1 r) thus ?case using big_step_tr.Seq by auto
+  case (Seq c1 s t c2 r) 
+  obtain C1 where 1:"strip C1 = c1" and 2:"(Some C1, s) \<Rightarrow> t" using Seq.hyps(2) by blast
+  obtain C2 where 3:"strip C2 = c2" and 4:"(Some C2, t) \<Rightarrow> r" using Seq.hyps(4) by blast
+  obtain C where "C = C1;; C2" by simp
+  hence "strip C = c1;; c2 \<and> (Some C, s) \<Rightarrow> r" using 1 2 3 4 big_step.Seq by auto
+  thus ?case by blast
 next
   case (IfTrue b s c1 t c2)
+    obtain C1 where 1:"strip C1 = c1 \<and> (Some C1, s) \<Rightarrow> t" using IfTrue.hyps(3) by blast
+    obtain C where "strip C = IF b THEN c1 ELSE c2 FI"
     thus ?case by (simp add: big_step.IfTrue)
 next
   case (IfFalse b s c2 t P c1)

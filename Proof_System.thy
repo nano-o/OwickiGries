@@ -47,7 +47,11 @@ ParCond: "\<lbrakk> \<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c1 {Q
 
 ParWhile: "\<lbrakk>\<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c {P}\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P} (WHILE b INV I DO c OD) {\<lambda>s. P s \<and> \<not>bval b s}"  |
 
-ParConseq:"\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>P {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P'} c {Q'}"
+ParConseq:"\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>P {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P'} c {Q'}" |
+
+ParPar:  "\<lbrakk>\<forall>i \<in> Index Ts. \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q}); INTERFREE Ts\<rbrakk> 
+    \<Longrightarrow> (\<turnstile>\<^sub>P {\<lambda> s . \<forall>i \<in> Index Ts. (pre (the (com(Ts!i)))) s} (Parallel Ts)
+           {\<lambda> s . \<forall>i \<in> Index Ts. (snd (Ts!i)) s})"
 
 lemmas [simp] = hoare.Assign hoare.Seq hoare.If
 
@@ -163,58 +167,95 @@ next
   thus ?case by (metis While.hyps(1) While.hyps(4) hoare_valid_tr_def small_to_big_tr) 
 qed
 
-(*lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
-proof(induct rule:hoare.induct)
-  case (Assign P Q a x)
-    thus ?case 
+lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q}\<Longrightarrow> \<Turnstile> C {Q}"
+proof(induct arbitrary:C Q rule:hoare.induct)
+  case (Assign P Q a x C Q')
+    thus ?case by (metis big_equal_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
 next
-  case (While P I b c Q)
+  case (Seq c1 c2 Q C Q')
+    thus ?case by (metis big_equal_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
+next
+  case (Wait P b Q C Q')
+    thus ?case by (metis big_equal_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
+next
+  case (Conseq c Q Q' C R)
+    thus ?case by blast 
+next
+  case (If c1 Q P b c2 C Q')
   {
     fix s t
-    have "(Some {P} WHILE b INV I DO c OD, s) \<Rightarrow> t  \<Longrightarrow> I s  \<Longrightarrow>  I t \<and> \<not> bval b t"
-    proof(induction "Some {P} WHILE b INV I DO c OD" s t rule: big_step_induct)
-      case WhileFalse thus ?case by (simp add: While.hyps(1)) 
+    have "(Some {P} IF b THEN c1 ELSE c2 FI, s) \<Rightarrow> t \<Longrightarrow> P s \<Longrightarrow> Q t"
+    proof(induction "Some {P} IF b THEN c1 ELSE c2 FI" s t rule: big_step_induct)
+      case IfFalse thus ?case using If.hyps(2) If.hyps(4) If.hyps(6) big_to_small hoare_sound_tr hoare_valid_def vc_equal by blast 
     next
-      case WhileTrue thus ?case 
+      case IfTrue thus ?case using If.hyps(1) If.hyps(2) If.hyps(3) big_to_small hoare_sound_tr hoare_valid_def vc_equal by blast 
     qed
   }
-  thus ?case 
-qed*)
+  thus ?case by (simp add: If.hyps(2) If.prems) 
+next
+  case (While P I b c Q C Q')
+  {
+    fix s t
+    have "(Some {I} WHILE b INV I DO c OD, s) \<Rightarrow> t  \<Longrightarrow> I s  \<Longrightarrow>  I t \<and> \<not> bval b t"
+    proof(induction "Some {I} WHILE b INV I DO c OD" s t rule: big_step_induct)
+      case WhileFalse thus ?case by (simp add: While.hyps(1)) 
+    next
+      case WhileTrue thus ?case using While.hyps(3) big_equal_tr big_to_small_tr hoare_sound_tr hoare_valid_tr_def vc_equal by fastforce 
+    qed
+  }
+  thus ?case using While.hyps(4) While.prems by blast 
+qed
 
-lemma vc_ssound:
+lemma soudness: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
+using hoare_sound hoare_sound_tr vc_equal
+by force
+
+lemma ssound:
   assumes "(Some c, s) \<rightarrow>* (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
   shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" 
 using assms
-proof(induct "(Some c, s)" "(ro, t)" arbitrary:c rule:star.induct)
+proof(induct "(Some c, s)" "(ro, t)" arbitrary:c s rule:star.induct)
   case refl
   thus ?case by auto
 next
-  case (step y)
-  { assume 1:"fst y = None"
-    from 1 have 2:"ro = None" and 3:"snd y = t" 
-      using none_final step.hyps(2) by (metis prod.exhaust_sel)+
-    have "Q (snd y)" using step.prems step.hyps(1) (* For this we need the soundness of the hoare rules*)
-    oops
+  case (step y c s)
+  assume 0:"(Some c, s) \<rightarrow> y" and  1:"y \<rightarrow>* (ro, t)" and 2:"(\<And>c s. y = (Some c, s) \<Longrightarrow>
+    pre c s \<Longrightarrow> \<turnstile> c {Q} \<Longrightarrow> case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t)" and
+      3:" pre c s" and 4:"\<turnstile> c {Q}"
+  show "case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t"
+  using 0 1 2 3 4
+  proof(induct "(Some c, s)" y rule:small_step.induct)
+    case (Assign P x a) thus ?case
+      by (metis assms(1) assms(2) assms(3) hoare_sound hoare_sound_tr hoare_valid_def none_final(1) option.simps(4) vc_equal)
+  next
+    case (Seq1 c0 s' c1)
+  { 
+    assume 0:"y = (None, s')"
+    hence 1:"ro = None \<and> t = s'" using none_final(1) none_final(2) step.hyps(2) by blast
+    hence "Q t" using assms(1, 2, 3) hoare_sound hoare_sound_tr hoare_valid_def vc_equal by auto
+    hence "case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t" by (simp add:1)
+  }
+  moreover
+  {
+    fix c'
+    assume 1:"y = (Some c', s')"
+    have 2:"pre c' s'"
+    hence "case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t" 
 
 fun asubst:: "aexp \<Rightarrow> aexp \<Rightarrow> vname\<Rightarrow> aexp" where  
 "asubst (N n) a x  = N n"|
 "asubst (V v) a x = (if v = x then a else V v)"|
 "asubst (Plus a1 a2) a x = Plus (asubst a1 a x) (asubst a2 a x)"
 
-fun post :: "acom \<Rightarrow> assn \<Rightarrow> assn" where
-"post ({P} x ::= a) P = (\<lambda>s. \<exists>y. (s x = aval (asubst a y x) s) \<and> P (s[y/x]))" |
-"post (C1;; C2) P = post C2 (post C1 P)" |
-"post ({P} IF b THEN C1 ELSE C2 FI) P =
-  (\<lambda>s. post C1 (\<lambda>s. P s \<and> bval b s) s \<or> post C2 (\<lambda>s. P s \<and> \<not>bval b s) s)"|
-"post ({P} WHILE b INV I DO C OD) P = (\<lambda>s. I s \<and> \<not>bval b s)"|
-"post ({P} WAIT b END) P = (\<lambda>s. P s \<and> bval b s)"
+fun strongest_post :: "acom \<Rightarrow> assn \<Rightarrow> assn" where
+"strongest_post ({P} x ::= a) Q = (\<lambda>s. \<exists>y. (s x = aval (asubst a y x) s) \<and> Q (s[y/x]))" |
+"strongest_post (C1;; C2) P = strongest_post C2 (strongest_post C1 P)" |
+"strongest_post ({P} IF b THEN C1 ELSE C2 FI) Q =
+  (\<lambda>s. strongest_post C1 (\<lambda>s. Q s \<and> bval b s) s \<or> strongest_post C2 (\<lambda>s. Q s \<and> \<not>bval b s) s)"|
+"strongest_post ({P} WHILE b INV I DO C OD) Q = (\<lambda>s. I s \<and> \<not>bval b s)"|
+"strongest_post ({P} WAIT b END) Q = (\<lambda>s. Q s \<and> bval b s)"
 
 fun com::"(acom option \<times> assn) \<Rightarrow> acom option" where
 "com (Some c, Q) = (Some c)"|
 "com (None, Q) = None"
-
-inductive hoare_par :: "assn \<Rightarrow> par_com \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile>\<^sub>P {_} _ {_}") where
-  "\<lbrakk>\<forall>i \<in> Index Ts. \<exists>c Q. Ts!i = (Some c, Q) \<and> \<turnstile> c {Q}; INTERFREE Ts\<rbrakk> 
-    \<Longrightarrow> \<turnstile>\<^sub>P {\<lambda> s . \<forall>i \<in> Index Ts. (pre (the (com(Ts!i)))) s} (Parallel Ts)
-           {\<lambda> s . \<forall>i \<in> Index Ts. (post (Ts!i)) s}"
 end
