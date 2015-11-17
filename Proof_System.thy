@@ -36,6 +36,24 @@ lemmas [simp] = hoare.Assign hoare.Seq hoare.If
 lemmas [intro!] = hoare.Assign hoare.Seq hoare.If
 
 inductive
+  hoare_par :: "assn \<Rightarrow> par_com \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile>\<^sub>P ({(1_)}/ (_)/ {(1_)})" 50)
+where
+ParAssign: "\<turnstile>\<^sub>P {\<lambda>s. P (s[a/x])} (x ::= a) {Q}"  |
+
+ParSeq: "\<lbrakk> \<turnstile>\<^sub>P {P} c0 {R}; \<turnstile>\<^sub>P {R} c1 {Q} \<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P} (c0,, c1) {Q}"  |
+
+ParCond: "\<lbrakk> \<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c1 {Q}; \<turnstile>\<^sub>P {\<lambda>s. P s \<and> \<not>bval b s} c2 {Q}\<rbrakk>
+    \<Longrightarrow> \<turnstile>\<^sub>P {P} (IF b THEN c1 ELSE c2 FI) {Q}"  |
+
+ParWhile: "\<lbrakk>\<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c {P}\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P} (WHILE b INV I DO c OD) {\<lambda>s. P s \<and> \<not>bval b s}"  |
+
+ParConseq:"\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>P {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P'} c {Q'}"
+
+lemmas [simp] = hoare.Assign hoare.Seq hoare.If
+
+lemmas [intro!] = hoare.Assign hoare.Seq hoare.If
+
+inductive
   hoare_tr :: "assn \<Rightarrow> com \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile>\<^sub>t\<^sub>r ({(1_)}/ (_)/ {(1_)})" 50)
 where
 Assign:  "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (s[a/x])\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} x ::= a {Q}"  |
@@ -45,8 +63,8 @@ Seq: "\<lbrakk> \<turnstile>\<^sub>t\<^sub>r {P} c1 {Q};  \<turnstile>\<^sub>t\<
 If: "\<lbrakk> \<turnstile>\<^sub>t\<^sub>r {\<lambda>s. P s \<and> bval b s} c1 {Q};  \<turnstile>\<^sub>t\<^sub>r {\<lambda>s. P s \<and> \<not> bval b s} c2 {Q}\<rbrakk>
     \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} IF b THEN c1 ELSE c2 FI {Q}"  |
 
-While: "\<lbrakk>\<forall>s. P s \<longrightarrow> I s; \<turnstile>\<^sub>t\<^sub>r {\<lambda>s. I s \<and> bval b s} c {I}\<rbrakk> \<Longrightarrow>
-        \<turnstile>\<^sub>t\<^sub>r {P} WHILE b INV I DO c OD {\<lambda>s. I s \<and> \<not> bval b s}"  |
+While: "\<lbrakk>\<forall>s. P s \<longrightarrow> I s; \<turnstile>\<^sub>t\<^sub>r {\<lambda>s. I s \<and> bval b s} c {I}; \<forall>s. I s \<and> \<not>bval b s \<longrightarrow> Q s\<rbrakk> \<Longrightarrow>
+        \<turnstile>\<^sub>t\<^sub>r {P} WHILE b INV I DO c OD {Q}"  |
 
 Wait:"\<lbrakk>\<forall>s. P s \<and> bval b s \<longrightarrow> Q s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} (WAIT b END) {Q}"|
 
@@ -59,7 +77,6 @@ proof(induction rule:hoare.induct)
   case (Assign P a x)
     show ?case by (simp add: Assign.hyps hoare_tr.Assign) 
 next
-  print_cases
   case (Seq C0 C1 Q)
     show ?case using Seq.IH(1) Seq.IH(2) hoare_tr.Seq by auto
 next
@@ -97,12 +114,12 @@ next
     have "\<turnstile> C {Q}" by (simp add:1 2 4 5 6)
     thus ?case using 0 3 6 by force
 next
-  case (While P I b c)
-    assume 1:"\<forall>s. P s \<longrightarrow> I s"
+  case (While P I b c Q)
+    assume 0:"\<forall>s. P s \<longrightarrow> I s" and 1:"\<forall>s. I s \<and> \<not> bval b s \<longrightarrow> Q s"
     obtain C::acom where 2:"strip C = c" and 3:"\<turnstile> C {I}" and 4:"(\<forall>s. I s \<and> bval b s \<longrightarrow> pre C s)" using While.IH by auto
     obtain CW::acom where 5:"CW = {P} WHILE b INV I DO C OD" by simp
-    have "\<turnstile> CW {\<lambda>a. I a \<and> \<not> bval b a}" by (simp add: 1 3 4 5 hoare.While) 
-    thus ?case using 2 5 by force
+    have "\<turnstile> CW {Q}" by (simp add: 0 1 3 4 5 hoare.While) 
+    thus ?case using 2 5 by force 
 next
   case (Wait P b Q)
   obtain C where 1:"C = {P} WAIT b END" by simp
@@ -117,91 +134,61 @@ next
   thus ?case using 3 6 by blast
 qed
 
+lemma hoare_sound_tr: "\<turnstile>\<^sub>t\<^sub>r {P} C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {P} C {Q}"
+proof(induct rule:hoare_tr.induct)
+  case (Assign P Q a x) thus ?case using hoare_valid_tr_def small_to_big_tr by blast
+next
+  case (Seq P c1 Q c2 R) thus ?case by (smt BTSeqE big_to_small_tr hoare_valid_tr_def small_to_big_tr) 
+next
+  case (If P b c1 Q c2) thus ?case by (smt BTIfE big_to_small_tr hoare_valid_tr_def small_to_big_tr) 
+next
+  case (Wait P b Q) thus ?case using hoare_valid_tr_def small_to_big_tr by blast
+next
+  case (conseq P' P c Q Q')
+    assume 0:"\<forall>s. P' s \<longrightarrow> P s" and 1:"\<Turnstile>\<^sub>t\<^sub>r {P} c {Q}" and 2:"\<forall>s. Q s \<longrightarrow> Q' s"
+    hence 3:"(\<forall>s t. (P s \<and> (Some(c), s) \<rightarrow>\<^sub>t\<^sub>r* (None, t))  \<longrightarrow>  Q t)" by (simp add: hoare_valid_tr_def) 
+    hence "(\<forall>s t. (P' s \<and> (Some(c), s) \<rightarrow>\<^sub>t\<^sub>r* (None, t))  \<longrightarrow>  Q' t)" using 0 2 by blast 
+    thus ?case by (simp add: hoare_valid_tr_def)
+next
+  case (While P I b c Q)
+  {
+    fix s t
+    have "(Some WHILE b INV I DO c OD, s) \<Rightarrow>\<^sub>t\<^sub>r t  \<Longrightarrow> I s  \<Longrightarrow>  I t \<and> \<not> bval b t"
+    proof(induction "Some WHILE b INV I DO c OD" s t rule: big_step_tr_induct)
+      case WhileFalse thus ?case by (simp add: While.hyps(1)) 
+    next
+      case WhileTrue thus ?case by (metis (no_types, lifting) While.hyps(3) big_to_small_tr hoare_valid_tr_def) 
+    qed
+  }
+  thus ?case by (metis While.hyps(1) While.hyps(4) hoare_valid_tr_def small_to_big_tr) 
+qed
 
-
-(*lemma tr_hoare_sound:
-  "\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {P} c {Q}" 
-proof (induct rule:hoare_tr.induct)
-  case (Assign P a x)
-  { fix s
-    have "(Some (x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r* (None, s[a/x])" by simp }
-  note 1 = this
-  { fix s t
-    assume 1:"P (s[a/x])" and 2:"(Some (x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
-    from 2 have "(Some (x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r (None, t)" using none_final 
-    have "P t"
-  thus ?case apply (auto simp add:hoare_valid_tr_def)*)
-
-
-(*lemma hoare_sound:
-  assumes "\<turnstile> C {Q}"
-  shows "\<Turnstile> C {Q}"
-using assms
-proof(induction rule:hoare.induct)
+(*lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
+proof(induct rule:hoare.induct)
   case (Assign P Q a x)
-    {
-      fix s t
-      assume 1:"P s" and 2:"(Some({P} x ::= a), s) \<rightarrow>* (None, t)" and 3:"\<forall>s. P s \<longrightarrow> Q (s[a/x])"
-      have "t = s(x := aval a s)" using 2 final_det by blast 
-      hence "Q t" using 1 Assign.hyps by blast
-    }
-    thus ?case by (metis Assign.hyps hoare_valid_def pre.simps(1)) 
+    thus ?case 
 next
-  case (Seq c0 c1 Q)
-  assume 1:"\<Turnstile> c0 {pre c1}" and 2:"\<Turnstile> c1 {Q}"
-  have 3:"(\<forall>s t. ((pre c0) s \<and> (Some(c0), s) \<rightarrow>* (None, t))  \<longrightarrow>  (pre c1) t)" using 1 by (simp add: hoare_valid_def) 
-  have 4:"(\<forall>s t. ((pre c1) s \<and> (Some(c1), s) \<rightarrow>* (None, t))  \<longrightarrow>  Q t)" using 2 by (simp add: hoare_valid_def) 
-  have 5:"((pre c0) s \<and> (Some(c0), s) \<rightarrow>* (None, t))  \<longrightarrow>  (pre c1) t" using 3 by blast
-  have 5:"((pre c1) t \<and> (Some(c1), t) \<rightarrow>* (None, r))  \<longrightarrow>  Q r" using 4 by blast
-  hence "((pre c0) s \<and> (Some(c0;; c1), s) \<rightarrow>* (Some(c1), t))  \<longrightarrow>  (pre c1) t"
-
-(*definition
-hoare_valid :: "acom \<Rightarrow> assn \<Rightarrow> bool" ("\<Turnstile> (_)/ {(1_)}" 50) where
-"\<Turnstile> c {Q} \<equiv> (\<forall>s t. ((pre c) s \<and> (Some(c), s) \<rightarrow>* (None, t))  \<longrightarrow>  Q t)"*)
+  case (While P I b c Q)
+  {
+    fix s t
+    have "(Some {P} WHILE b INV I DO c OD, s) \<Rightarrow> t  \<Longrightarrow> I s  \<Longrightarrow>  I t \<and> \<not> bval b t"
+    proof(induction "Some {P} WHILE b INV I DO c OD" s t rule: big_step_induct)
+      case WhileFalse thus ?case by (simp add: While.hyps(1)) 
+    next
+      case WhileTrue thus ?case 
+    qed
+  }
+  thus ?case 
 qed*)
-
-
-lemma Strong_Soundness: "\<lbrakk>(Some c, s) \<rightarrow>* (co, t); pre c s; \<turnstile> c {q}\<rbrakk>
-\<Longrightarrow> if co = None then q t else pre (the co) t"
-apply(force )
-done
-
-lemma hoare_sound:
-  assumes "\<turnstile> C {Q}"
-  shows "\<Turnstile> C {Q}"
-apply (unfold hoare_valid_def)
-apply clarify
-apply(drule Strong_Soundness)
-apply simp_all
-proof-
-  show "\<And>s. pre C s \<Longrightarrow> \<turnstile> C {Q} " using assms by simp 
-qed
-
-lemma vc_ssound:"\<lbrakk>(Some c, s) \<rightarrow>* (ro, t); pre(c) s; \<turnstile> c {Q}\<rbrakk> \<Longrightarrow> case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t"
-using assms
-proof(induction "(Some c, s)" "(ro, t)" rule:star.induct)
-  case refl
-    thus ?case by auto
-next
-  case (step y)
-  thus ?case
-  proof(induct "(Some c, s)" y arbitrary:c s t Q rule:small_step.induct)
-    case (Assign P x a s t Q)
-    assume 0:"(None, s[a/x]) \<rightarrow>* (ro, t)"
-    have "ro = None"
-qed
-
 
 lemma vc_ssound:
   assumes "(Some c, s) \<rightarrow>* (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
   shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" 
 using assms
-thm star.induct
 proof(induct "(Some c, s)" "(ro, t)" arbitrary:c rule:star.induct)
   case refl
   thus ?case by auto
 next
-  print_cases
   case (step y)
   { assume 1:"fst y = None"
     from 1 have 2:"ro = None" and 3:"snd y = t" 
@@ -215,7 +202,7 @@ fun asubst:: "aexp \<Rightarrow> aexp \<Rightarrow> vname\<Rightarrow> aexp" whe
 "asubst (Plus a1 a2) a x = Plus (asubst a1 a x) (asubst a2 a x)"
 
 fun post :: "acom \<Rightarrow> assn \<Rightarrow> assn" where
-"post ({P} x ::= a) P = (\<lambda>s. \<exists>y. (s x = aval (asubst a y x) s) \<and> P(s[y/x]))" |
+"post ({P} x ::= a) P = (\<lambda>s. \<exists>y. (s x = aval (asubst a y x) s) \<and> P (s[y/x]))" |
 "post (C1;; C2) P = post C2 (post C1 P)" |
 "post ({P} IF b THEN C1 ELSE C2 FI) P =
   (\<lambda>s. post C1 (\<lambda>s. P s \<and> bval b s) s \<or> post C2 (\<lambda>s. P s \<and> \<not>bval b s) s)"|
@@ -226,8 +213,8 @@ fun com::"(acom option \<times> assn) \<Rightarrow> acom option" where
 "com (Some c, Q) = (Some c)"|
 "com (None, Q) = None"
 
-
-lemma "\<lbrakk>\<forall>i \<in> Index Ts. \<exists>c Q. Ts!i = (Some c, Q) \<and> \<turnstile> c Q; INTERFREE Ts\<rbrakk>
-\<Longrightarrow> \<turnstile>\<^sub>P {\<inter>(\<forall>i \<in> Index Ts. pre(the(com(Ts!i))))} (Parallel Ts) {\<inter>(\<forall>i \<in> Index Ts. post(Ts!i)}"
-
+inductive hoare_par :: "assn \<Rightarrow> par_com \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile>\<^sub>P {_} _ {_}") where
+  "\<lbrakk>\<forall>i \<in> Index Ts. \<exists>c Q. Ts!i = (Some c, Q) \<and> \<turnstile> c {Q}; INTERFREE Ts\<rbrakk> 
+    \<Longrightarrow> \<turnstile>\<^sub>P {\<lambda> s . \<forall>i \<in> Index Ts. (pre (the (com(Ts!i)))) s} (Parallel Ts)
+           {\<lambda> s . \<forall>i \<in> Index Ts. (post (Ts!i)) s}"
 end

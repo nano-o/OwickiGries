@@ -16,9 +16,8 @@ next
   case step thus ?case by (metis star.step)
 qed
 
-
 lemmas star_induct =
-  star.induct[of "r:: 'a*'b \<Rightarrow> 'a*'b \<Rightarrow> bool", split_format(complete)]
+  star.induct[of "r:: 'a * 'b \<Rightarrow> 'a * 'b \<Rightarrow> bool", split_format(complete)]
 
 declare star.refl[simp,intro]
 
