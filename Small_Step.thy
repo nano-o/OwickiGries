@@ -245,6 +245,7 @@ proof(induct "(Some c1)" s "None::acom option" t arbitrary:c1 rule: star_induct[
   }
   moreover
   {
+    fix c
     assume "y = Some c" 
     hence "(Some(c1;; c2), s) \<rightarrow>* (Some c2, t)" by (metis 1 small_step.Seq2 star.simps step.hyps(3))
   }
