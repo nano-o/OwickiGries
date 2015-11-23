@@ -16,8 +16,7 @@ IfTrue:  "bval b s \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<ri
 IfFalse: "\<not>bval b s \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> (Some c2, s)" |
 
 WhileFalse: "\<not>bval b s \<Longrightarrow> (Some ({P} WHILE b INV I DO c OD), s) \<rightarrow> (None, s)" |
-WhileTrue:"\<lbrakk>bval b s; \<forall>s. P s \<longrightarrow> I s; \<forall>s. I s \<and> bval b s \<longrightarrow> pre(c) s\<rbrakk> \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<rightarrow> (Some(c;; ({I} WHILE b INV I DO c OD)), s)"|
-  --{* TODO: remove the preconditions "\<forall>s. P s \<longrightarrow> I s; \<forall>s. I s \<and> bval b s \<longrightarrow> pre(c) s" *}
+WhileTrue:"bval b s \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<rightarrow> (Some(c;; ({I} WHILE b INV I DO c OD)), s)"|
 
 Wait:"bval b s \<Longrightarrow> (Some({P} WAIT b END), s) \<rightarrow> (None, s)"
 
@@ -34,8 +33,7 @@ IfTrue:  "\<lbrakk>bval b s; (Some(c1), s) \<Rightarrow> t\<rbrakk> \<Longrighta
 IfFalse: "\<lbrakk>\<not>bval b s; (Some(c2), s) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<Rightarrow> t" |
 
 WhileFalse: "\<not>bval b s \<Longrightarrow> (Some ({P} WHILE b INV I DO c OD), s) \<Rightarrow> s" |
-WhileTrue:"\<lbrakk>bval b s; \<forall>s. P s \<longrightarrow> I s; \<forall>s. I s \<and> bval b s \<longrightarrow> pre(c) s; (Some c, s) \<Rightarrow> s1; (Some({I} WHILE b INV I DO c OD), s1) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<Rightarrow> t"|
-  --{* TODO: remove the preconditions "\<forall>s. P s \<longrightarrow> I s; \<forall>s. I s \<and> bval b s \<longrightarrow> pre(c) s" *}
+WhileTrue:"\<lbrakk>bval b s; (Some c, s) \<Rightarrow> s1; (Some({I} WHILE b INV I DO c OD), s1) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<Rightarrow> t"|
 
 Wait:"bval b s \<Longrightarrow> (Some({P} WAIT b END), s) \<Rightarrow> s"
 
