@@ -71,15 +71,22 @@ ParWhile: "\<lbrakk>\<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c {P}
 
 ParConseq:"\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>P {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P'} c {Q'}"
 
+thm star_induct[where ?r="par_trans"]
 
+abbreviation P  where "P Ts s Rs t \<equiv> INTERFREE Ts \<longrightarrow> (\<forall> i \<in> Index Ts . \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})) \<longrightarrow> 
+ (\<forall> i \<in> Index Ts . case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s | None \<Rightarrow> True) \<longrightarrow> 
+ (\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t | None \<Rightarrow> post (Rs!j) t)"
 
 lemma strong_soundness_paral:
   fixes Ts Rs s t
-  assumes "\<And>i . i \<in> Index Ts \<Longrightarrow> \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})" 
+  assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P* (Parallel Rs, t)"
   and "INTERFREE Ts"
-  and "(Parallel Ts, s) \<rightarrow>\<^sub>P* (Parallel Rs, t)"
+  and "\<And>i . i \<in> Index Ts \<Longrightarrow> \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})"
   and "\<And> i . i \<in> Index Ts \<Longrightarrow> case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s | None \<Rightarrow> True"
-  shows "\<And> j . j \<in> Index Rs \<Longrightarrow> case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t | None \<Rightarrow> post (Rs!j) t"
-oops
-
+  shows "\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t | None \<Rightarrow> post (Rs!j) t"
+  using assms
+proof (induct "(Parallel Ts, s)" "(Parallel Rs, t)" arbitrary:Ts Rs s t  rule:star.induct)
+  case (refl) thus ?case by force
+next
+  
 end
