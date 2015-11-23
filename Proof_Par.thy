@@ -77,16 +77,69 @@ abbreviation P  where "P Ts s Rs t \<equiv> INTERFREE Ts \<longrightarrow> (\<fo
  (\<forall> i \<in> Index Ts . case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s | None \<Rightarrow> True) \<longrightarrow> 
  (\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t | None \<Rightarrow> post (Rs!j) t)"
 
+lemma interfree_step:"\<lbrakk>interfree(Some c, Q, opt); (Some c, s) \<rightarrow> (ro, t)\<rbrakk> \<Longrightarrow> interfree(ro, Q, opt)" sorry
+
+lemma interfree_step_rev:"\<lbrakk>interfree(opt, Q, Some c); (Some c, s) \<rightarrow> (ro, t)\<rbrakk> \<Longrightarrow> interfree(opt, Q, ro)" sorry
+
+lemma index_unchanged:
+  assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)"
+  shows "Index Ts = Index Rs"
+proof -
+  obtain i c Q ro t where 1:"i \<in> Index Ts" and 2:"Ts!i = (Some c, Q)" and 3:"(Some c,s) \<rightarrow> (ro,t)"
+  and 4:"(Parallel Rs, t) = (Parallel (Ts[i := (ro, Q)]), t)"
+  using assms ParallelE by auto
+  have "length Ts = length Rs" using 4 by auto
+  thus ?thesis by (auto simp add:Index_def)
+qed
+
+thm ParallelE
+
+lemma INTERFREE_Step: assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)" and "INTERFREE Ts" shows "INTERFREE Rs"
+proof -
+  obtain i c Q ro t where 1:"i \<in> Index Ts" and 2:"Ts!i = (Some c, Q)" and 3:"(Some c,s) \<rightarrow> (ro,t)"
+  and 41:"(Parallel Rs, t) = (Parallel (Ts[i := (ro, Q)]), t)"
+  using assms(1) ParallelE by auto
+  have 42:"Rs = Ts[i := (ro, Q)]" using 41 by blast
+  have 0:"Index Ts = Index Rs" using assms(1) index_unchanged by auto
+  thm INTERFREE_def
+  { fix j k
+    assume 5:"j \<in> Index Rs" and 6:"k \<in> Index Rs" and 7:"j \<noteq> k"
+    have "interfree (com (Rs ! j), post (Rs ! j), com (Rs ! k))"
+    proof (cases "i = j \<or> i = k")
+      case False thus ?thesis using assms 5 6 7 42 INTERFREE_def 0 by auto
+    next
+      case True
+      note 8 = this
+      show ?thesis
+      proof (cases "i = j")
+        case True 
+        hence "interfree (Some c, post (Ts ! j), com (Ts ! k))"
+        using assms(2) 8 7 2 5 6 0 INTERFREE_def by auto
+        thus ?thesis using interfree_step
+        by (smt "2" "3" "42" "5" "7" Index_def Proof_Par.com.simps(1) Proof_Par.com.simps(2) True list_update_overwrite list_update_same_conv mem_Collect_eq nth_list_update_neq option.collapse post.simps)
+      next
+        case False 
+        hence "interfree (com (Ts ! j), post (Ts ! j), Some c)" 
+        using assms(2) 8 7 2 5 6 0 INTERFREE_def by force
+        thus ?thesis using interfree_step_rev 
+        by (smt "0" "3" "42" "6" False Index_def True com.elims mem_Collect_eq nth_list_update_eq nth_list_update_neq prod.inject)
+      qed
+    qed }
+  thus ?thesis unfolding INTERFREE_def by blast
+qed
+
 lemma strong_soundness_paral:
   fixes Ts Rs s t
   assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P* (Parallel Rs, t)"
   and "INTERFREE Ts"
-  and "\<And>i . i \<in> Index Ts \<Longrightarrow> \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})"
-  and "\<And> i . i \<in> Index Ts \<Longrightarrow> case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s | None \<Rightarrow> True"
+  and "\<forall>i \<in> Index Ts. case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s  \<and> (\<turnstile> c {Q}) | None \<Rightarrow> post (Ts!i) s"
   shows "\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t | None \<Rightarrow> post (Rs!j) t"
   using assms
 proof (induct "(Parallel Ts, s)" "(Parallel Rs, t)" arbitrary:Ts Rs s t  rule:star.induct)
-  case (refl) thus ?case by force
+  case (refl) thus ?case by (simp add: option.case_eq_if)
 next
+  case (step y)
+  term ?case
+  let ?Ts'="fst y" and ?s'="snd y"
   
 end

@@ -208,6 +208,14 @@ section {* Strong soundness *}
 
 text {* At each step, the state reached satisfies the precondition of the current command. *}
 
+lemma strong_sound_1:
+  assumes 1:"(Some c, s) \<rightarrow> (ro, t)" and 2:"pre(c) s" and 3:"\<turnstile> c {Q}" 
+  shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" oops
+
+lemma strong_sound_2:
+  assumes "(Some c, s) \<rightarrow> (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
+  shows "case ro of Some r \<Rightarrow> \<turnstile> r {Q}| None \<Rightarrow> True" sorry
+
 lemma strong_sound:
   assumes "(Some c, s) \<rightarrow>* (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
   shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" sorry

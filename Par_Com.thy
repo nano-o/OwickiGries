@@ -62,7 +62,7 @@ where "x \<rightarrow>\<^sub>P* y == star par_trans x y"
 
 subsection{* Executability *}
 
-code_pred small_step .
+code_pred par_trans.
 
 lemmas par_trans_induct = par_trans.induct[split_format(complete)]
 
@@ -77,5 +77,6 @@ inductive_cases PBasicE[elim!]: "(x ::= a, s) \<rightarrow>\<^sub>P ct"
 inductive_cases PSeqE[elim]: "((c1,, c2), s) \<rightarrow>\<^sub>P ct"
 inductive_cases PIfE[elim!]: "((IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>P ct"
 inductive_cases PWhileE[elim]: "((WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>P ct"
+
 
 end
