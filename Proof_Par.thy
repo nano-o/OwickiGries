@@ -8,6 +8,7 @@ fun asubst:: "aexp \<Rightarrow> aexp \<Rightarrow> vname\<Rightarrow> aexp" whe
 "asubst (Plus a1 a2) a x = Plus (asubst a1 a x) (asubst a2 a x)"
 
 fun strongest_post :: "acom \<Rightarrow> assn \<Rightarrow> assn" where
+  -- {* Computes the strongest postcodition of an annotated command. *}
 "strongest_post ({P} x ::= a) Q = (\<lambda>s. \<exists>y. (s x = aval (asubst a y x) s) \<and> Q (s[y/x]))" |
 "strongest_post (C1;; C2) P = strongest_post C2 (strongest_post C1 P)" |
 "strongest_post ({P} IF b THEN C1 ELSE C2 FI) Q =
@@ -16,12 +17,13 @@ fun strongest_post :: "acom \<Rightarrow> assn \<Rightarrow> assn" where
 "strongest_post ({P} WAIT b END) Q = (\<lambda>s. Q s \<and> bval b s)"
 
 fun post :: "(acom option \<times> assn) \<Rightarrow> assn" where
+  -- {* Extract the postcondition annotation from a parallel command *}
 "post (ap, Q) = Q"
 
 fun com::"(acom option \<times> assn) \<Rightarrow> acom option" where
+  -- {* Extracts the command option from a parallel command *}
 "com (Some c, Q) = (Some c)"|
 "com (None, Q) = None"
-
 
 fun assertions::"acom \<Rightarrow> assn set" where
 "assertions ({P} x ::= a) = {P}"|
@@ -37,8 +39,11 @@ fun atomics::"acom \<Rightarrow> (assn \<times> com) set" where
 "atomics ({P} WHILE b INV I DO C OD) = (atomics C)"|
 "atomics ({P} WAIT b END) = {}"
 
-
 fun interfree::"acom option \<times> assn \<times> acom option \<Rightarrow> bool" where
+  -- {* interfree (c1, Q, c2) holds when c2 does not interfere with the annotation of c1 and with Q,
+i.e. if R is the precondition of an atomic statement r of c2 then (1) starting in an R and Q state 
+and executing r leads to a Q state; (2) if P is an assertion in c1, then starting in an R and P state 
+and executing r leads to a P state.*}
 "interfree(co, Q, None) = True"|
 "interfree(None, Q, Some a) = (\<forall>(R, r) \<in> (atomics a). \<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> R s} r {Q})"|
 "interfree(Some c, Q, Some a) = (\<forall>(R, r) \<in> (atomics a). \<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> R s} r {Q} \<and> 
@@ -65,8 +70,6 @@ ParWhile: "\<lbrakk>\<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c {P}
        \<turnstile>\<^sub>P {P} (WHILE b INV I DO c OD) {\<lambda>s. P s \<and> \<not>bval b s}"  |
 
 ParConseq:"\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>P {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P'} c {Q'}"
-
-
 
 
 end

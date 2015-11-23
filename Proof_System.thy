@@ -2,6 +2,8 @@ theory Proof_System
 imports Par_Com
 begin
 
+section {* Definition of the proof rules *}
+
 definition
 hoare_valid :: "acom \<Rightarrow> assn \<Rightarrow> bool" ("\<Turnstile> (_)/ {(1_)}" 50) where
 "\<Turnstile> c {Q} \<equiv> (\<forall>s t. ((pre c) s \<and> (Some(c), s) \<rightarrow>* (None, t))  \<longrightarrow>  Q t)"
@@ -59,7 +61,9 @@ lemmas [simp] = hoare_tr.Assign hoare_tr.Seq hoare_tr.If
 
 lemmas [intro!] = hoare_tr.Assign hoare_tr.Seq hoare_tr.If
 
-lemma hoare_equal_tr:
+section {* Equivalence of provability in the new and traditional systems *}
+
+lemma new_implies_tr:
   "\<turnstile> C {Q} \<Longrightarrow> \<exists>c. \<turnstile>\<^sub>t\<^sub>r {pre C} c {Q} \<and> strip C = c"
 proof(induction rule:hoare.induct)
   case (Assign P a x)
@@ -85,7 +89,7 @@ next
     thus ?case using 3 6 strip.simps(4) by blast 
 qed
 
-lemma tr_hoare_equal:"\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<exists>C. (strip C = c) \<and> (\<turnstile> C {Q}) \<and> (\<forall>s. P s \<longrightarrow> pre (C) s)"
+lemma tr_implies_new:"\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<exists>C. (strip C = c) \<and> (\<turnstile> C {Q}) \<and> (\<forall>s. P s \<longrightarrow> pre (C) s)"
 proof(induction rule:hoare_tr.induct)
   case (Assign P Q a x)
     obtain C::acom where 1:"C = {P} x ::= a" by simp
@@ -121,6 +125,12 @@ next
   have "\<turnstile> C {Q'}" using 2 4 Conseq by blast
   thus ?case using 3 6 by blast
 qed
+
+lemma tr_eq_new:"(\<turnstile>\<^sub>t\<^sub>r {P} c {Q}) = (\<exists>C. (strip C = c) \<and> (\<turnstile> C {Q}) \<and> (\<forall>s. P s \<longrightarrow> pre (C) s))"
+using new_implies_tr tr_implies_new
+by (metis conseq)
+
+section {* Soundness  *}
 
 lemma hoare_sound_tr: "\<turnstile>\<^sub>t\<^sub>r {P} C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {P} C {Q}"
 proof(induct rule:hoare_tr.induct)
@@ -170,9 +180,9 @@ next
     fix s t
     have "(Some {P} IF b THEN c1 ELSE c2 FI, s) \<Rightarrow> t \<Longrightarrow> P s \<Longrightarrow> Q t"
     proof(induction "Some {P} IF b THEN c1 ELSE c2 FI" s t rule: big_step_induct)
-      case IfFalse thus ?case by (metis If.hyps(2) If.hyps(4) If.hyps(6) big_to_small hoare_sound_tr hoare_valid_def hoare_equal_tr) 
+      case IfFalse thus ?case by (metis If.hyps(2) If.hyps(4) If.hyps(6) big_to_small hoare_sound_tr hoare_valid_def new_implies_tr) 
     next
-      case IfTrue thus ?case using If.hyps(1) If.hyps(2) If.hyps(3) big_to_small hoare_sound_tr hoare_valid_def hoare_equal_tr by fastforce 
+      case IfTrue thus ?case using If.hyps(1) If.hyps(2) If.hyps(3) big_to_small hoare_sound_tr hoare_valid_def new_implies_tr by fastforce 
     qed
   }
   thus ?case by (simp add: If.hyps(2) If.prems) 
@@ -184,31 +194,24 @@ next
     proof(induction "Some {I} WHILE b INV I DO c OD" s t rule: big_step_induct)
       case WhileFalse thus ?case by (simp add: While.hyps(1)) 
     next
-      case WhileTrue thus ?case using While.hyps(3) big_equal_tr big_to_small_tr hoare_sound_tr hoare_valid_tr_def hoare_equal_tr by fastforce 
+      case WhileTrue thus ?case using While.hyps(3) big_equal_tr big_to_small_tr hoare_sound_tr hoare_valid_tr_def new_implies_tr by fastforce 
     qed
   }
   thus ?case using While.hyps(4) While.prems by blast 
 qed
 
 lemma soudness: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
-using hoare_sound hoare_sound_tr hoare_equal_tr
+using hoare_sound hoare_sound_tr new_implies_tr
 by force
 
-(*lemma Strong_Soundness_aux_aux [rule_format]:
- assumes "(Some c, s) \<rightarrow> (co', t)"
- shows "(\<forall>c. pre c s \<longrightarrow>
- (\<forall>Q. \<turnstile> c {Q} \<longrightarrow> (if co' = None then Q t else pre(the co') t \<and> \<turnstile> (the co') {Q} )))"
-using assms
-proof(induct "(Some c, s)" "(co', t)" rule:small_step.induct)
-  case (Assign P x a)
-  thus ?case
-apply simp_all
-apply 
+section {* Strong soundness *}
 
+text {* At each step, the state reached satisfies the precondition of the current command. *}
 
 lemma strong_sound:
   assumes "(Some c, s) \<rightarrow>* (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
-  shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" 
+  shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" oops
+(*
 using assms
 proof(induct "(Some c, s)" "(ro, t)" arbitrary:c s rule:star.induct)
   case refl
@@ -223,9 +226,10 @@ next
   using 0 1 2 3 4 5
   proof(induct "(Some c, s)" y rule:small_step.induct)
     case (Assign P x a) thus ?case
-      by (metis assms hoare_sound hoare_sound_tr hoare_valid_def none_final(1) option.simps(4) hoare_equal_tr)
+      by (metis assms hoare_sound hoare_sound_tr hoare_valid_def none_final(1) option.simps(4) new_implies_tr)
   next
     case (IfTrue b P c1 c2)
+      have "pre c1 s"
       thus ?case
   next
     case (Seq1 c0 s' c1)
@@ -241,9 +245,7 @@ next
   {
     fix c' s'
     assume 0:"y = (Some c', s')"
-    hence "case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t" 
-
-*)
+    hence "case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t" *)
 
 
 end

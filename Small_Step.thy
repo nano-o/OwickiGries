@@ -2,6 +2,8 @@ theory Small_Step
 imports Ann_Com Star
 begin
 
+subsection {* Step definitions *}
+
 inductive
   small_step :: "(acom option) * state \<Rightarrow> (acom option) * state \<Rightarrow> bool" (infix "\<rightarrow>" 55)
 where
@@ -15,6 +17,7 @@ IfFalse: "\<not>bval b s \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s
 
 WhileFalse: "\<not>bval b s \<Longrightarrow> (Some ({P} WHILE b INV I DO c OD), s) \<rightarrow> (None, s)" |
 WhileTrue:"\<lbrakk>bval b s; \<forall>s. P s \<longrightarrow> I s; \<forall>s. I s \<and> bval b s \<longrightarrow> pre(c) s\<rbrakk> \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<rightarrow> (Some(c;; ({I} WHILE b INV I DO c OD)), s)"|
+  --{* TODO: remove the preconditions "\<forall>s. P s \<longrightarrow> I s; \<forall>s. I s \<and> bval b s \<longrightarrow> pre(c) s" *}
 
 Wait:"bval b s \<Longrightarrow> (Some({P} WAIT b END), s) \<rightarrow> (None, s)"
 
@@ -32,6 +35,7 @@ IfFalse: "\<lbrakk>\<not>bval b s; (Some(c2), s) \<Rightarrow> t\<rbrakk> \<Long
 
 WhileFalse: "\<not>bval b s \<Longrightarrow> (Some ({P} WHILE b INV I DO c OD), s) \<Rightarrow> s" |
 WhileTrue:"\<lbrakk>bval b s; \<forall>s. P s \<longrightarrow> I s; \<forall>s. I s \<and> bval b s \<longrightarrow> pre(c) s; (Some c, s) \<Rightarrow> s1; (Some({I} WHILE b INV I DO c OD), s1) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<Rightarrow> t"|
+  --{* TODO: remove the preconditions "\<forall>s. P s \<longrightarrow> I s; \<forall>s. I s \<and> bval b s \<longrightarrow> pre(c) s" *}
 
 Wait:"bval b s \<Longrightarrow> (Some({P} WAIT b END), s) \<Rightarrow> s"
 
@@ -41,6 +45,8 @@ lemmas big_step_induct = big_step.induct[split_format(complete)]
 abbreviation
   small_steps :: "(acom option) * state \<Rightarrow> (acom option) * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
 where "x \<rightarrow>* y == star small_step x y"
+
+subsubsection {* Traditional version *}
 
 inductive
   small_step_tr :: "(com option) * state \<Rightarrow> (com option) * state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>t\<^sub>r" 55)
@@ -88,7 +94,11 @@ code_pred small_step .
 
 lemmas small_step_induct = small_step.induct[split_format(complete)]
 
-subsubsection{* Proof automation *}
+code_pred small_step_tr .
+
+lemmas small_step_tr_induct = small_step_tr.induct[split_format(complete)]
+
+subsection{* Proof automation *}
 
 declare small_step.intros[simp, intro]
 
@@ -153,22 +163,6 @@ next
   show "(Some (c1;; c2);; c3, s) \<Rightarrow> s'" using big_step.Seq by auto 
 qed
 
-theorem big_step_determ: "\<lbrakk>(c,s) \<Rightarrow> t; (c,s) \<Rightarrow> u \<rbrakk> \<Longrightarrow> u = t"
-  by (induction arbitrary: u rule: big_step.induct) blast+
-
-text{* A simple property: *}
-lemma deterministic:
-  "cs \<rightarrow> cs' \<Longrightarrow> cs \<rightarrow> cs'' \<Longrightarrow> cs'' = cs'"
-apply(induction arbitrary: cs'' rule: small_step.induct)
-apply blast+
-done
-
-subsection{* Executability *}
-
-code_pred small_step_tr .
-
-lemmas small_step_tr_induct = small_step_tr.induct[split_format(complete)]
-
 subsubsection{* Proof automation *}
 
 declare small_step_tr.intros[simp,intro]
@@ -181,6 +175,17 @@ inductive_cases IfTE[elim!]: "(Some(IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<
 inductive_cases WhileTE[elim]: "(Some(WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>t\<^sub>r ct"
 inductive_cases WaitTE[elim]: "(Some(WAIT b END), s) \<rightarrow>\<^sub>t\<^sub>r ct"
 
+subsection {* Determinism *}
+
+theorem big_step_determ: "\<lbrakk>(c,s) \<Rightarrow> t; (c,s) \<Rightarrow> u \<rbrakk> \<Longrightarrow> u = t"
+  by (induction arbitrary: u rule: big_step.induct) blast+
+
+text{* A simple property: *}
+lemma deterministic:
+  "cs \<rightarrow> cs' \<Longrightarrow> cs \<rightarrow> cs'' \<Longrightarrow> cs'' = cs'"
+apply(induction arbitrary: cs'' rule: small_step.induct)
+apply blast+
+done
 
 text{* A simple property: *}
 lemma tr_deterministic:
@@ -188,6 +193,8 @@ lemma tr_deterministic:
 apply(induction arbitrary: cs'' rule: small_step_tr.induct)
 apply blast+
 done
+
+subsection {* Equivalence between the big step semantics and the small step semantics *}
 
 lemma none_final:
   assumes "(None, s) \<rightarrow>* (c, t)"
@@ -360,6 +367,8 @@ theorem big_iff_small:
   "cs \<Rightarrow> t = cs \<rightarrow>* (None, t)"
 by(metis big_to_small small_to_big)
 
+subsubsection {* Traditional version *}
+
 lemma none_final_tr:
   assumes "(None, s) \<rightarrow>\<^sub>t\<^sub>r* (c, t)"
   shows "c = None" and "s = t"
@@ -525,6 +534,8 @@ done
 theorem big_iff_small_tr:
   "cs \<Rightarrow>\<^sub>t\<^sub>r t = cs \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
 by(metis big_to_small_tr small_to_big_tr)
+
+subsection {* Equivalence between the traditional definitions and the new ones *}
 
 lemma big_equal_tr:"(Some C, s) \<Rightarrow> t \<Longrightarrow> (Some (strip C), s) \<Rightarrow>\<^sub>t\<^sub>r t"
 proof(induct "(Some C, s)" t arbitrary:C s rule:big_step.induct)
