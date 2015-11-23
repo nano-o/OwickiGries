@@ -210,9 +210,8 @@ text {* At each step, the state reached satisfies the precondition of the curren
 
 lemma strong_sound:
   assumes "(Some c, s) \<rightarrow>* (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
-  shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" oops
-(*
-using assms
+  shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" sorry
+(* using assms
 proof(induct "(Some c, s)" "(ro, t)" arbitrary:c s rule:star.induct)
   case refl
   thus ?case by auto

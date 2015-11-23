@@ -72,4 +72,14 @@ ParWhile: "\<lbrakk>\<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c {P}
 ParConseq:"\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>P {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P'} c {Q'}"
 
 
+
+lemma strong_soundness_paral:
+  fixes Ts Rs s t
+  assumes "\<And>i . i \<in> Index Ts \<Longrightarrow> \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})" 
+  and "INTERFREE Ts"
+  and "(Parallel Ts, s) \<rightarrow>\<^sub>P* (Parallel Rs, t)"
+  and "\<And> i . i \<in> Index Ts \<Longrightarrow> case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s | None \<Rightarrow> True"
+  shows "\<And> j . j \<in> Index Rs \<Longrightarrow> case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t | None \<Rightarrow> post (Rs!j) t"
+oops
+
 end
