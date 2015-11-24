@@ -2,13 +2,15 @@ theory Proof_Par
 imports Proof_System
 begin
 
+section {* Definition of the Owicki and Gries proof rules. *} 
+
 fun asubst:: "aexp \<Rightarrow> aexp \<Rightarrow> vname\<Rightarrow> aexp" where  
 "asubst (N n) a x  = N n"|
 "asubst (V v) a x = (if v = x then a else V v)"|
 "asubst (Plus a1 a2) a x = Plus (asubst a1 a x) (asubst a2 a x)"
 
 fun strongest_post :: "acom \<Rightarrow> assn \<Rightarrow> assn" where
-  -- {* Computes the strongest postcodition of an annotated command. *}
+  -- {* Computes the strongest postcodition of an annotated command. TODO: not needed.*}
 "strongest_post ({P} x ::= a) Q = (\<lambda>s. \<exists>y. (s x = aval (asubst a y x) s) \<and> Q (s[y/x]))" |
 "strongest_post (C1;; C2) P = strongest_post C2 (strongest_post C1 P)" |
 "strongest_post ({P} IF b THEN C1 ELSE C2 FI) Q =
@@ -71,6 +73,10 @@ ParWhile: "\<lbrakk>\<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c {P}
 
 ParConseq:"\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>P {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P'} c {Q'}"
 
+section {* Soundness of the Owicki and Gries proof rules *}
+
+subsection {* INTERFREE is preserved by the small step relation. *}
+
 thm star_induct[where ?r="par_trans"]
 
 abbreviation P  where "P Ts s Rs t \<equiv> INTERFREE Ts \<longrightarrow> (\<forall> i \<in> Index Ts . \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})) \<longrightarrow> 
@@ -128,18 +134,39 @@ proof -
   thus ?thesis unfolding INTERFREE_def by blast
 qed
 
+subsection {* Strong soundness of the parallel small step. *}
+
+lemma post_unchanged:
+  assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)"
+  and "i \<in> Index Ts"
+  shows "post (Ts!i) = post (Rs!i)"
+proof -
+  obtain i c Q ro t where 1:"i \<in> Index Ts" and 2:"Ts!i = (Some c, Q)" and 3:"(Some c,s) \<rightarrow> (ro,t)"
+  and 4:"(Parallel Rs, t) = (Parallel (Ts[i := (ro, Q)]), t)"
+  using assms ParallelE by auto
+  thus ?thesis
+  by (metis Index_def mem_Collect_eq nth_list_update_eq nth_list_update_neq par_com.inject(1) post.simps prod.sel(1))  
+qed
+
+lemma strong_soundness_paral_1:
+  fixes Ts Rs s t
+  assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)"
+  and "INTERFREE Ts"
+  and "\<forall>i \<in> Index Ts. case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s  \<and> (\<turnstile> c {post (Ts!i)}) | None \<Rightarrow> post (Ts!i) s"
+  shows "\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t  \<and> (\<turnstile> c {post (Rs!j)}) | None \<Rightarrow> post (Rs!j) t" sorry
+
 lemma strong_soundness_paral:
   fixes Ts Rs s t
   assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P* (Parallel Rs, t)"
   and "INTERFREE Ts"
-  and "\<forall>i \<in> Index Ts. case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s  \<and> (\<turnstile> c {Q}) | None \<Rightarrow> post (Ts!i) s"
-  shows "\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t | None \<Rightarrow> post (Rs!j) t"
-  using assms
-proof (induct "(Parallel Ts, s)" "(Parallel Rs, t)" arbitrary:Ts Rs s t  rule:star.induct)
-  case (refl) thus ?case by (simp add: option.case_eq_if)
+  and "\<forall>i \<in> Index Ts. case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s  \<and> (\<turnstile> c {post (Ts!i)}) | None \<Rightarrow> post (Ts!i) s"
+  shows "\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t  \<and> (\<turnstile> c {post (Rs!j)}) | None \<Rightarrow> post (Rs!j) t"
+  using assms 
+  proof (induct "Parallel Ts" s "Parallel Rs" t arbitrary: Ts Rs rule:star_induct)
+  case (refl) thus ?case by (metis (no_types, lifting)) 
 next
-  case (step y)
-  term ?case
-  let ?Ts'="fst y" and ?s'="snd y"
-  
+  case (step y) thus ?case using strong_soundness_paral_1
+  by (smt INTERFREE_Step ParallelE eq_fst_iff option.case_eq_if)
+qed
+
 end
