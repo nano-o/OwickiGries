@@ -35,6 +35,12 @@ Wait: "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> Q s\<rbrakk> \<
 
 Conseq:"\<lbrakk>\<turnstile> c {Q}; \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile> c {Q'}"
 
+inductive_cases AssignE:" \<turnstile> ({P} x ::= a) {Q}"
+inductive_cases SeqE:" \<turnstile> (c0;; c1) {Q}"
+inductive_cases IfE:"\<turnstile> ({P} IF b THEN c1 ELSE c2 FI) {Q}"
+inductive_cases WhileE:" \<turnstile> ({P} WHILE b INV I DO c OD) {Q}"
+inductive_cases WaitE:" \<turnstile> ({P} WAIT b END) {Q}"
+
 lemmas [simp] = hoare.Assign hoare.Seq hoare.If
 
 lemmas [intro!] = hoare.Assign hoare.Seq hoare.If
@@ -161,8 +167,8 @@ next
   thus ?case by (metis While.hyps(1) While.hyps(4) hoare_valid_tr_def small_to_big_tr) 
 qed
 
-lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q}\<Longrightarrow> \<Turnstile> C {Q}" sorry
-(* proof(induct arbitrary:C Q rule:hoare.induct)
+lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q}\<Longrightarrow> \<Turnstile> C {Q}"
+proof(induct arbitrary:C Q rule:hoare.induct)
   case (Assign P Q a x C Q')
     thus ?case by (metis big_equal_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
 next
@@ -195,14 +201,13 @@ next
     proof(induction "Some {I} WHILE b INV I DO c OD" s t rule: big_step_induct)
       case WhileFalse thus ?case by (simp add: While.hyps(1)) 
     next
-      case WhileTrue thus ?case using While.hyps(2,3,5) big_equal_tr big_to_small_tr hoare_sound_tr hoare_valid_tr_def new_implies_tr
-      sorry
+      case WhileTrue thus ?case using While.hyps(2) While.hyps(3) big_equal_tr big_to_small_tr hoare_sound_tr hoare_valid_tr_def new_implies_tr by fastforce 
     qed
   }
-  thus ?case using While.hyps(4) While.prems 
-qed *)
+  thus ?case using While.hyps(4) While.prems by blast
+qed
  
-lemma soudness: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
+lemma soundness: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
 using hoare_sound hoare_sound_tr new_implies_tr
 by force
 
@@ -210,17 +215,39 @@ section {* Strong soundness *}
 
 text {* At each step, the state reached satisfies the precondition of the current command. *}
 
-lemma strong_sound_1:
-  assumes 1:"(Some c, s) \<rightarrow> (ro, t)" and 2:"pre(c) s" and 3:"\<turnstile> c {Q}" 
-  shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" oops
+thm small_step.induct
+thm hoare.induct
 
-lemma strong_sound_2:
-  assumes "(Some c, s) \<rightarrow> (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
-  shows "case ro of Some r \<Rightarrow> \<turnstile> r {Q}| None \<Rightarrow> True" sorry
+lemma strong_sound_1:
+  assumes 1:"(Some c, s) \<rightarrow> (ro, t)" and 2:"pre(c) s" and 3:"\<turnstile> c {Q}"
+  shows "case ro of Some r \<Rightarrow> pre(r) t \<and>  \<turnstile> r {Q}| None \<Rightarrow> Q t"
+  using assms(3) assms(1,2)
+proof (induct c Q arbitrary: ro t s rule:hoare.induct)
+  case (Assign) thus ?case by auto
+next
+  case (Seq) thus ?case by (smt hoare.Seq is_none_code(2) is_none_simps(1) option.case_eq_if option.sel pre.simps(2) small_step_cases(3))
+next
+  case (If) thus ?case by auto
+next
+  case (While) thus ?case
+    using hoare.While by auto
+next
+  case (Wait) thus ?case by auto
+next
+  case (Conseq) thus ?case by (metis (no_types, lifting) hoare.Conseq option.case_eq_if)
+qed
 
 lemma strong_sound:
   assumes "(Some c, s) \<rightarrow>* (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
-  shows "case ro of Some r \<Rightarrow> pre(r) t| None \<Rightarrow> Q t" sorry
+  shows "case ro of Some r \<Rightarrow> pre(r) t \<and> \<turnstile> r {Q}| None \<Rightarrow> Q t"
+using assms
+proof (induct "Some c " s ro t arbitrary: Q c rule:star_induct) 
+  case (refl) thus ?case by simp
+next
+  case (step) thus ?case using strong_sound_1
+  by (metis (no_types, lifting) case_optionE none_final(1) none_final(2) option.case_eq_if)
+qed
+
 (* using assms
 proof(induct "(Some c, s)" "(ro, t)" arbitrary:c s rule:star.induct)
   case refl

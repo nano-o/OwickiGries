@@ -103,8 +103,10 @@ declare small_step.intros[simp, intro]
 text{* Rule inversion: *}
 
 inductive_cases AssignE[elim!]: "(Some({P} x ::= a), s) \<rightarrow> ct"
+thm AssignE
 inductive_cases SeqE[elim]: "(Some(c1;; c2), s) \<rightarrow> ct"
 inductive_cases IfE[elim!]: "(Some({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> ct"
+thm IfE
 inductive_cases WhileE[elim]: "(Some({P} WHILE b INV I DO c OD), s) \<rightarrow> ct"
 inductive_cases WaitE[elim]: "(Some({P} WAIT b END), s) \<rightarrow> ct"
 
@@ -175,8 +177,10 @@ inductive_cases WaitTE[elim]: "(Some(WAIT b END), s) \<rightarrow>\<^sub>t\<^sub
 
 subsection {* Determinism *}
 
+thm big_step.induct
+
 theorem big_step_determ: "\<lbrakk>(c,s) \<Rightarrow> t; (c,s) \<Rightarrow> u \<rbrakk> \<Longrightarrow> u = t"
-  by (induction arbitrary: u rule: big_step.induct) blast+
+  by (induct  arbitrary: u rule: big_step.induct) blast+
 
 text{* A simple property: *}
 lemma deterministic:
@@ -211,13 +215,16 @@ proof -
   thus "c = None" and "s = t" by auto
 qed
 
+thm star.induct
+
 lemma final_det:
   assumes "(c,s) \<rightarrow>* (None,t)"
   and "(c,s) \<rightarrow>* (None, t')"
   shows "t = t'"
 using assms
-proof (induct "(c,s)" "(None::(acom option), t)" arbitrary:c s rule:star.induct) 
-  case refl thus ?case by (simp add: none_final(2))  
+proof (induct c s "(None::(acom option))" t rule:star_induct)
+  case refl thus ?case 
+using none_final(2) by blast
 next
   case step thus ?case using deterministic
     by (metis (no_types, hide_lams) PairE none_final(2) star.simps)
@@ -292,7 +299,7 @@ next
   assume b: "\<not> bval b s"
   show ?case by (simp add: b) 
 next
-  case (WhileTrue b s P I c s1 t)
+  case (WhileTrue b s c s1 I t P)
   let ?w  = "{I} WHILE b INV I DO c OD"
   let ?if = "c;; {I} WHILE b INV I DO c OD"
   assume w: "(Some ?w, s1) \<rightarrow>* (None, t)"
@@ -300,7 +307,8 @@ next
   assume b: "bval b s"
   have "(Some ?w, s) \<rightarrow> (Some ?if, s)" using WhileTrue.hyps(3) b by blast 
   moreover have "(Some ?if, s) \<rightarrow>* (None, t)" using c seq_comp w by blast 
-  ultimately show ?case by (metis WhileTrue.hyps(2) WhileTrue.hyps(3) b small_step.WhileTrue star.step) 
+  ultimately show ?case 
+    by (meson b small_step.WhileTrue star.step) 
 next
   case (Wait b s P)
   thus ?case by blast 
