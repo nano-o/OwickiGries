@@ -69,8 +69,7 @@ lemmas [intro!] = hoare_tr.Assign hoare_tr.Seq hoare_tr.If
 
 section {* Equivalence of provability in the new and traditional systems *}
 
-lemma new_implies_tr:
-  "\<turnstile> C {Q} \<Longrightarrow> \<exists>c. \<turnstile>\<^sub>t\<^sub>r {pre C} c {Q} \<and> strip C = c"
+lemma new_implies_tr: "\<turnstile> C {Q} \<Longrightarrow> \<exists>c. \<turnstile>\<^sub>t\<^sub>r {pre C} c {Q} \<and> strip C = c"
 proof(induction rule:hoare.induct)
   case (Assign P a x)
     show ?case by (simp add: Assign.hyps hoare_tr.Assign) 
@@ -168,7 +167,7 @@ next
 qed
  
 lemma valid_implies_valid_tr: "\<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
-by (metis big_equal_tr big_iff_small big_to_small_tr hoare_valid_def hoare_valid_tr_def)
+by (metis big_implies_big_tr big_iff_small big_to_small_tr hoare_valid_def hoare_valid_tr_def)
 
 lemma soundness: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
 using valid_implies_valid_tr hoare_sound_tr new_implies_tr

@@ -541,9 +541,9 @@ theorem big_iff_small_tr:
   "cs \<Rightarrow>\<^sub>t\<^sub>r t = cs \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
 by(metis big_to_small_tr small_to_big_tr)
 
-subsection {* Equivalence between the traditional definitions and the new ones *}
+subsection {* New big step implies traditional big step *}
 
-lemma big_equal_tr:"(Some C, s) \<Rightarrow> t \<Longrightarrow> (Some (strip C), s) \<Rightarrow>\<^sub>t\<^sub>r t"
+lemma big_implies_big_tr:"(Some C, s) \<Rightarrow> t \<Longrightarrow> (Some (strip C), s) \<Rightarrow>\<^sub>t\<^sub>r t"
 proof(induct "(Some C, s)" t arbitrary:C s rule:big_step.induct)
   case (Assign P x a s) 
     thus ?case using big_step_tr.Assign by auto
@@ -565,35 +565,5 @@ next
   case (Wait b s P)
     thus ?case by (simp add: big_step_tr.Wait) 
 qed
-
-(*lemma tr_big_equal:"(Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t \<Longrightarrow> \<exists>C. (strip C = c) \<and> (Some C, s) \<Rightarrow> t"
-proof(induct "(Some c, s)" t arbitrary:c s rule:big_step_tr.induct)
-  case (Assign x a s) 
-    thus ?case using big_step.Assign strip.simps(1) by blast 
-next
-  case (Seq c1 s t c2 r) 
-  obtain C1 where 1:"strip C1 = c1" and 2:"(Some C1, s) \<Rightarrow> t" using Seq.hyps(2) by blast
-  obtain C2 where 3:"strip C2 = c2" and 4:"(Some C2, t) \<Rightarrow> r" using Seq.hyps(4) by blast
-  obtain C where "C = C1;; C2" by simp
-  hence "strip C = c1;; c2 \<and> (Some C, s) \<Rightarrow> r" using 1 2 3 4 big_step.Seq by auto
-  thus ?case by blast
-next
-  case (IfTrue b s c1 t c2)
-    obtain C1 where 1:"strip C1 = c1 \<and> (Some C1, s) \<Rightarrow> t" using IfTrue.hyps(3) by blast
-    obtain C where "strip C = IF b THEN c1 ELSE c2 FI"
-    thus ?case by (simp add: big_step.IfTrue)
-next
-  case (IfFalse b s c2 t P c1)
-    thus ?case by (simp add: big_step_tr.IfFalse)
-next
-  case (WhileFalse b s P I c)
-    thus ?case by (simp add: big_step_tr.WhileFalse)
-next
-  case (WhileTrue b s P I c s1 t)
-    thus ?case using big_step_tr.WhileTrue by auto
-next
-  case (Wait b s P)
-    thus ?case by (simp add: big_step_tr.Wait) 
-qed*)
 
 end
