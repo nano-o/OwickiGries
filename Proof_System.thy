@@ -166,49 +166,12 @@ next
   }
   thus ?case by (metis While.hyps(1) While.hyps(4) hoare_valid_tr_def small_to_big_tr) 
 qed
-
-lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q}\<Longrightarrow> \<Turnstile> C {Q}"
-proof(induct arbitrary:C Q rule:hoare.induct)
-  case (Assign P Q a x C Q')
-    thus ?case by (metis big_equal_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
-next
-  case (Seq c1 c2 Q C Q')
-    thus ?case by (metis big_equal_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
-next
-  case (Wait P b Q C Q')
-    thus ?case by (metis big_equal_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
-next
-  case (Conseq c Q Q' C R)
-    thus ?case by blast 
-next
-  case (If c1 Q P b c2 C Q')
-  {
-    fix s t
-    have "(Some {P} IF b THEN c1 ELSE c2 FI, s) \<Rightarrow> t \<Longrightarrow> P s \<Longrightarrow> Q t"
-    proof(induction "Some {P} IF b THEN c1 ELSE c2 FI" s t rule: big_step_induct)
-      case IfFalse thus ?case by (metis If.hyps(2) If.hyps(4) If.hyps(6) big_to_small hoare_sound_tr hoare_valid_def new_implies_tr) 
-    next
-      case IfTrue thus ?case using If.hyps(1) If.hyps(2) If.hyps(3) big_to_small hoare_sound_tr hoare_valid_def new_implies_tr 
-      by metis
-    qed
-  }
-  thus ?case by (simp add: If.hyps(2) If.prems) 
-next
-  case (While P I b c Q C Q')
-  {
-    fix s t
-    have "(Some {I} WHILE b INV I DO c OD, s) \<Rightarrow> t  \<Longrightarrow> I s  \<Longrightarrow>  I t \<and> \<not> bval b t"
-    proof(induction "Some {I} WHILE b INV I DO c OD" s t rule: big_step_induct)
-      case WhileFalse thus ?case by (simp add: While.hyps(1)) 
-    next
-      case WhileTrue thus ?case using While.hyps(2) While.hyps(3) big_equal_tr big_to_small_tr hoare_sound_tr hoare_valid_tr_def new_implies_tr by fastforce 
-    qed
-  }
-  thus ?case using While.hyps(4) While.prems by blast
-qed
  
+lemma valid_implies_valid_tr: "\<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
+by (metis big_equal_tr big_iff_small big_to_small_tr hoare_valid_def hoare_valid_tr_def)
+
 lemma soundness: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
-using hoare_sound hoare_sound_tr new_implies_tr
+using valid_implies_valid_tr hoare_sound_tr new_implies_tr
 by force
 
 section {* Strong soundness *}
@@ -247,41 +210,5 @@ next
   case (step) thus ?case using strong_sound_1
   by (metis (no_types, lifting) case_optionE none_final(1) none_final(2) option.case_eq_if)
 qed
-
-(* using assms
-proof(induct "(Some c, s)" "(ro, t)" arbitrary:c s rule:star.induct)
-  case refl
-  thus ?case by auto
-next
-  case (step y c s)
-  assume 0:"(Some c, s) \<rightarrow> y" and  1:"y \<rightarrow>* (ro, t)" and 2:"(\<And>c s. y = (Some c, s) \<Longrightarrow>
-    pre c s \<Longrightarrow> \<turnstile> c {Q} \<Longrightarrow> case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t)" and
-      3:" pre c s" and 4:"\<turnstile> c {Q}"
-  hence 5:"\<Turnstile> c {Q}" using soudness by blast 
-  show "case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t"
-  using 0 1 2 3 4 5
-  proof(induct "(Some c, s)" y rule:small_step.induct)
-    case (Assign P x a) thus ?case
-      by (metis assms hoare_sound hoare_sound_tr hoare_valid_def none_final(1) option.simps(4) new_implies_tr)
-  next
-    case (IfTrue b P c1 c2)
-      have "pre c1 s"
-      thus ?case
-  next
-    case (Seq1 c0 s' c1)
-      thus ?case
-  { 
-    fix s'
-    assume 0:"y = (None, s')"
-    hence 1:"ro = None \<and> t = s'" using none_final(1) none_final(2) step.hyps(2) by blast
-    hence "Q t" using assms(1, 2, 3) hoare_sound hoare_sound_tr hoare_valid_def vc_equal by auto
-    hence "case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t" by (simp add:1)
-  }
-  moreover
-  {
-    fix c' s'
-    assume 0:"y = (Some c', s')"
-    hence "case ro of None \<Rightarrow> Q t | Some r \<Rightarrow> pre r t" *)
-
 
 end
