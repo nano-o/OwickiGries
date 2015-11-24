@@ -9,15 +9,6 @@ fun asubst:: "aexp \<Rightarrow> aexp \<Rightarrow> vname\<Rightarrow> aexp" whe
 "asubst (V v) a x = (if v = x then a else V v)"|
 "asubst (Plus a1 a2) a x = Plus (asubst a1 a x) (asubst a2 a x)"
 
-fun strongest_post :: "acom \<Rightarrow> assn \<Rightarrow> assn" where
-  -- {* Computes the strongest postcodition of an annotated command. TODO: not needed.*}
-"strongest_post ({P} x ::= a) Q = (\<lambda>s. \<exists>y. (s x = aval (asubst a y x) s) \<and> Q (s[y/x]))" |
-"strongest_post (C1;; C2) P = strongest_post C2 (strongest_post C1 P)" |
-"strongest_post ({P} IF b THEN C1 ELSE C2 FI) Q =
-  (\<lambda>s. strongest_post C1 (\<lambda>s. Q s \<and> bval b s) s \<or> strongest_post C2 (\<lambda>s. Q s \<and> \<not>bval b s) s)"|
-"strongest_post ({P} WHILE b INV I DO C OD) Q = (\<lambda>s. I s \<and> \<not>bval b s)"|
-"strongest_post ({P} WAIT b END) Q = (\<lambda>s. Q s \<and> bval b s)"
-
 fun post :: "(acom option \<times> assn) \<Rightarrow> assn" where
   -- {* Extract the postcondition annotation from a parallel command *}
 "post (ap, Q) = Q"
@@ -77,16 +68,6 @@ section {* Soundness of the Owicki and Gries proof rules *}
 
 subsection {* INTERFREE is preserved by the small step relation. *}
 
-thm star_induct[where ?r="par_trans"]
-
-abbreviation P  where "P Ts s Rs t \<equiv> INTERFREE Ts \<longrightarrow> (\<forall> i \<in> Index Ts . \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})) \<longrightarrow> 
- (\<forall> i \<in> Index Ts . case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s | None \<Rightarrow> True) \<longrightarrow> 
- (\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t | None \<Rightarrow> post (Rs!j) t)"
-
-lemma interfree_step:"\<lbrakk>interfree(Some c, Q, opt); (Some c, s) \<rightarrow> (ro, t)\<rbrakk> \<Longrightarrow> interfree(ro, Q, opt)" sorry
-
-lemma interfree_step_rev:"\<lbrakk>interfree(opt, Q, Some c); (Some c, s) \<rightarrow> (ro, t)\<rbrakk> \<Longrightarrow> interfree(opt, Q, ro)" sorry
-
 lemma index_unchanged:
   assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)"
   shows "Index Ts = Index Rs"
@@ -98,7 +79,52 @@ proof -
   thus ?thesis by (auto simp add:Index_def)
 qed
 
-thm ParallelE
+lemma post_unchanged:
+  assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)"
+  and "i \<in> Index Ts"
+  shows "post (Ts!i) = post (Rs!i)"
+proof -
+  obtain i c Q ro t where 1:"i \<in> Index Ts" and 2:"Ts!i = (Some c, Q)" and 3:"(Some c, s) \<rightarrow> (ro,t)"
+  and 4:"(Parallel Rs, t) = (Parallel (Ts[i := (ro, Q)]), t)"
+  using assms ParallelE by auto
+  thus ?thesis
+  by (metis Index_def mem_Collect_eq nth_list_update_eq nth_list_update_neq par_com.inject(1) post.simps prod.sel(1))  
+qed
+
+lemma assertions_decrease:
+  assumes "(Some c, s) \<rightarrow> (Some c', t)"
+  shows "assertions c' \<subseteq> assertions c" using assms
+by (induct "Some c" s "Some c'" t arbitrary: c c' rule:small_step_induct) auto
+
+lemma atomics_decrease:
+  assumes "(Some c, s) \<rightarrow> (Some c', t)"
+  shows "atomics c' \<subseteq> atomics c"  using assms
+by (induct "Some c" s "Some c'" t arbitrary: c c' rule:small_step_induct) auto
+
+lemma interfree_step:
+  assumes "interfree(Some c, Q, opt)" and "(Some c, s) \<rightarrow> (ro, t)"
+  shows "interfree(ro, Q, opt)"
+proof (cases opt)
+  case None
+  thus "interfree(ro, Q, opt)" by simp
+next
+  case (Some u)
+  thus ?thesis using assms
+  proof (induct "(ro, Q, opt)" rule:interfree.induct)
+    assume "None = opt" and "opt = Some u"
+    hence "False" by simp
+    thus "interfree(ro, Q, opt)" by auto
+  next
+    case (2) thus ?thesis by auto
+  next
+    case (3) thus ?thesis using assertions_decrease by fastforce
+  qed
+qed
+
+lemma interfree_step_rev:"\<lbrakk>interfree(opt, Q, Some c); (Some c, s) \<rightarrow> (ro, t)\<rbrakk> \<Longrightarrow> interfree(opt, Q, ro)" sorry
+
+lemma interfree_step_post:"\<lbrakk>interfree(opt, Q, Some c); (Some c, s) \<rightarrow> (ro, t); case opt of (Some r) \<Rightarrow> pre r s| None \<Rightarrow> Q s\<rbrakk> \<Longrightarrow> case opt of (Some r) \<Rightarrow> pre r t| None \<Rightarrow> Q t" sorry
+
 
 lemma INTERFREE_Step: assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)" and "INTERFREE Ts" shows "INTERFREE Rs"
 proof -
@@ -122,13 +148,13 @@ proof -
         hence "interfree (Some c, post (Ts ! j), com (Ts ! k))"
         using assms(2) 8 7 2 5 6 0 INTERFREE_def by auto
         thus ?thesis using interfree_step
-        by (smt "2" "3" "42" "5" "7" Index_def Proof_Par.com.simps(1) Proof_Par.com.simps(2) True list_update_overwrite list_update_same_conv mem_Collect_eq nth_list_update_neq option.collapse post.simps)
+        by (smt 2 3 42 5 7 Index_def Proof_Par.com.simps(1) Proof_Par.com.simps(2) True list_update_overwrite list_update_same_conv mem_Collect_eq nth_list_update_neq option.collapse post.simps)
       next
         case False 
         hence "interfree (com (Ts ! j), post (Ts ! j), Some c)" 
         using assms(2) 8 7 2 5 6 0 INTERFREE_def by force
         thus ?thesis using interfree_step_rev 
-        by (smt "0" "3" "42" "6" False Index_def True com.elims mem_Collect_eq nth_list_update_eq nth_list_update_neq prod.inject)
+        by (smt 0 3 42 6 False Index_def True com.elims mem_Collect_eq nth_list_update_eq nth_list_update_neq prod.inject)
       qed
     qed }
   thus ?thesis unfolding INTERFREE_def by blast
@@ -136,24 +162,37 @@ qed
 
 subsection {* Strong soundness of the parallel small step. *}
 
-lemma post_unchanged:
-  assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)"
-  and "i \<in> Index Ts"
-  shows "post (Ts!i) = post (Rs!i)"
-proof -
-  obtain i c Q ro t where 1:"i \<in> Index Ts" and 2:"Ts!i = (Some c, Q)" and 3:"(Some c,s) \<rightarrow> (ro,t)"
-  and 4:"(Parallel Rs, t) = (Parallel (Ts[i := (ro, Q)]), t)"
-  using assms ParallelE by auto
-  thus ?thesis
-  by (metis Index_def mem_Collect_eq nth_list_update_eq nth_list_update_neq par_com.inject(1) post.simps prod.sel(1))  
-qed
-
 lemma strong_soundness_paral_1:
   fixes Ts Rs s t
-  assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)"
-  and "INTERFREE Ts"
-  and "\<forall>i \<in> Index Ts. case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s  \<and> (\<turnstile> c {post (Ts!i)}) | None \<Rightarrow> post (Ts!i) s"
-  shows "\<forall> j  \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t  \<and> (\<turnstile> c {post (Rs!j)}) | None \<Rightarrow> post (Rs!j) t" sorry
+  assumes 0:"(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)"
+  and 1:"INTERFREE Ts"
+  and 2:"\<forall>i \<in> Index Ts. case (com (Ts!i)) of (Some c) \<Rightarrow> pre c s  \<and> (\<turnstile> c {post (Ts!i)}) | None \<Rightarrow> post (Ts!i) s"
+  shows "\<forall> j \<in> Index Rs . case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t  \<and> (\<turnstile> c {post (Rs!j)}) | None \<Rightarrow> post (Rs!j) t"
+proof-
+  have 3:"INTERFREE Rs" by (metis 0 1 INTERFREE_Step)
+  obtain i c Q ro where 4:"i \<in> Index Ts" and 5:"Ts!i = (Some c, Q)" and 6:"(Some c, s) \<rightarrow> (ro, t)"
+  and 7:"(Parallel Rs, t) = (Parallel (Ts[i := (ro, Q)]), t)"  using assms ParallelE by auto
+  have 8:"Rs = Ts[i := (ro, Q)]" using 7 by blast
+  have 9:"Index Ts = Index Rs" using assms(1) index_unchanged by auto
+  { 
+    fix j
+    assume 10:"j \<in> Index Rs"
+    have "case (com (Rs!j)) of (Some c) \<Rightarrow> pre c t  \<and> (\<turnstile> c {post (Rs!j)}) | None \<Rightarrow> post (Rs!j) t"
+    proof (cases "i = j")
+      case True thus ?thesis 
+      by (smt 10 2 5 6 8 9 Index_def com.elims fst_conv mem_Collect_eq nth_list_update_eq option.case_eq_if option.distinct(1) option.sel post.simps star_step1 strong_sound)
+    next
+      case False 
+      have 11:"i \<noteq> j" by (metis False) 
+      hence 12:"case (com (Rs!j)) of (Some c) \<Rightarrow> pre c s  \<and> (\<turnstile> c {post (Rs!j)}) | None \<Rightarrow> post (Rs!j) s" using 2 8 post_unchanged
+      by (metis (no_types, lifting) 10 9 nth_list_update_neq option.case_eq_if)
+      have "interfree (com(Rs ! j), post (Rs ! j), Some c)"
+      by (metis (no_types, lifting) 1 10 4 5 6 8 9 False INTERFREE_def Proof_Par.com.simps(1) interfree_step_rev nth_list_update_neq)
+      thus ?thesis by (metis (no_types, lifting) 12 6 interfree_step_post option.case_eq_if) 
+    qed
+  }
+  thus ?thesis by blast
+qed
 
 lemma strong_soundness_paral:
   fixes Ts Rs s t
