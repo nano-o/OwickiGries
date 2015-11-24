@@ -96,6 +96,9 @@ lemma assertions_decrease:
   shows "assertions c' \<subseteq> assertions c" using assms
 by (induct "Some c" s "Some c'" t arbitrary: c c' rule:small_step_induct) auto
 
+lemma assertions_inclusion:"pre c \<in> assertions c"
+by (induct c) auto
+
 lemma atomics_decrease:
   assumes "(Some c, s) \<rightarrow> (Some c', t)"
   shows "atomics c' \<subseteq> atomics c"  using assms
@@ -147,41 +150,38 @@ next
 qed
 
 lemma interfree_step_post:
-  assumes "interfree(opt, Q, Some c)" and "(Some c, s) \<rightarrow> (ro, t)" and "case opt of (Some u) \<Rightarrow> pre u s| None \<Rightarrow> Q s"
-  and "pre c s"
+  assumes "interfree(opt, Q, Some c)" and "(Some c, s) \<rightarrow> (ro, t)" and "case opt of (Some u) \<Rightarrow> pre u s| None \<Rightarrow> Q s" and "pre c s"
   shows "case opt of (Some u) \<Rightarrow> pre u t| None \<Rightarrow> Q t"
-  proof(cases opt)
+proof(cases opt)
   case None
     have 1:"Q s" using None assms(3) by simp
     from assms(1) None have 2:"\<forall>(R, r) \<in> (atomics c). \<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> R s} r {Q}" by force
     show ?thesis using assms(2) assms(1,3,4)
     proof (induction "Some c" s ro t arbitrary: c rule:small_step_induct)
-      case (Assign P x a s) 
-      print_cases
+      case (Assign P x a s)
       hence 3:"{(P, x ::= a)} = atomics ({P} x ::= a)" by simp
       with Assign.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} x ::= a {Q}"
       by (metis (no_types, lifting) None hoare_valid_tr_def interfree.simps(2) singletonI splitD)
       have 5:"Q s \<and> P s" using None Assign.prems(2,3) by auto
-      show ?case using 3 4 5
-        by (metis (mono_tags, lifting) None hoare_valid_tr_def option.simps(4) small_step_tr.Assign star_step1)
+      show ?case using 4 5 None hoare_valid_tr_def by auto 
     qed (auto simp add:None) 
   next
   case (Some u)
-  
-    
-    
-  hence 1:"(\<forall>s t. \<forall>(R, r) \<in> (atomics c). ((\<lambda>s. Q s \<and> R s) s \<and> (Some(r), s) \<rightarrow>\<^sub>t\<^sub>r* (None, t))  \<longrightarrow>  Q t)" using assms(1) hoare_valid_tr_def by auto
-  hence "(\<forall>s t. \<forall>(R, r) \<in> (atomics c). ((\<lambda>s. Q s \<and> R s) s \<and> (Some c, s) \<rightarrow> (ro, t))  \<longrightarrow>  Q t)"
-  (*show ?thesis using assms(2) using assms(1, 3)
-  proof(induct "Some c" s "ro" t rule:small_step_induct)
-    case (Assign P x a s) thus ?case*)
-next
-  case (Some u)
-  thus ?thesis using assms
-
-  qed
-qed*)
-
+     have 1:" pre u s" using Some assms(3) by simp
+     have 2: "(\<forall>(R, r) \<in> (atomics c). \<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> R s} r {Q} \<and> 
+       (\<forall>P \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. P s \<and> R s} r {P}))" using Some assms(1) by auto
+     show ?thesis using assms(2) assms(1,3,4)
+    proof (induction "Some c" s ro t arbitrary: c rule:small_step_induct)
+    case (Assign P x a s)
+      hence 3:"{(P, x ::= a)} = atomics ({P} x ::= a)" by simp
+      with Assign.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} x ::= a {Q} \<and> 
+        (\<forall>R \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. R s \<and> P s} x ::= a {R})" 
+        by (metis (mono_tags, lifting) Some hoare_valid_tr_def interfree.simps(3) singletonI splitD)
+      have 5:"pre u s \<and> P s" using Some Assign.prems(2,3) by auto
+      have 6:"pre u \<in> (assertions u)" by (simp add: assertions_inclusion) 
+      show ?case by (smt 4 5 6 Some hoare_valid_tr_def option.simps(5) small_step_tr.Assign star_step1)
+    qed (auto simp add:Some)
+qed
 
 
 lemma INTERFREE_Step: assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)" and "INTERFREE Ts" shows "INTERFREE Rs"
@@ -247,7 +247,7 @@ proof-
       have "interfree (com(Rs ! j), post (Rs ! j), Some c)"
       by (metis (no_types, lifting) 1 10 4 5 6 8 9 False INTERFREE_def Proof_Par.com.simps(1) interfree_step_rev nth_list_update_neq)
       thus ?thesis
-      by (metis (no_types, lifting) "12" "2" "4" "5" "6" Proof_Par.com.simps(1) interfree_step_post option.case_eq_if option.distinct(1) option.sel) 
+      by (metis (no_types, lifting) 12 2 4 5 6 Proof_Par.com.simps(1) interfree_step_post option.case_eq_if option.distinct(1) option.sel) 
     qed
   }
   thus ?thesis by blast
