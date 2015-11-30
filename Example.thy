@@ -18,20 +18,17 @@ abbreviation "pre2 \<equiv> \<lambda> s . True"
 abbreviation "post1 \<equiv> \<lambda> s . True"
 abbreviation "post2 \<equiv> \<lambda> s . True"
 
-abbreviation "plus11 \<equiv> \<lambda>s. s(''x'' := aval (Plus (V ''x'') (N 1)) s, ''d1'' := 1)"
+abbreviation "plus11 \<equiv> \<lambda>s. s(''x'' := s ''x'' + 1, ''d1'' := 1)"
 
-abbreviation "plus12 \<equiv> \<lambda>s. s(''x'' := aval (Plus (V ''x'') (N 1)) s, ''d2'' := 1)"
+abbreviation "plus12 \<equiv> \<lambda>s. s(''x'' :=  s ''x'' + 1, ''d2'' := 1)"
 
 abbreviation "plus2 ==
   Parallel [((Some (ABasic pre1 (plus11))), post1),
-    ((Some (ABasic pre2 (plus12))), post1)]"
+    ((Some (ABasic pre2 (plus12))), post2)]"
 
 subsubsection{* Proof by Hoare Logic *}
 
-text{* Note that we deal with sequences of commands from right to left,
-pulling back the postcondition towards the precondition. *}
-
-lemma "\<turnstile>\<^sub>P {\<lambda>s. s x = 0} plus2 {\<lambda>s. s x = 2}"
+lemma "\<turnstile>\<^sub>P {\<lambda>s. s ''x'' = 0} plus2 {\<lambda>s. s ''x'' = 2}"
 apply(rule PParallelE)
 
 end
