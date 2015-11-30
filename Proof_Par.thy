@@ -19,14 +19,14 @@ fun com::"(acom option \<times> assn) \<Rightarrow> acom option" where
 "com (None, Q) = None"
 
 fun assertions::"acom \<Rightarrow> assn set" where
-"assertions ({P} x ::= a) = {P}"|
+"assertions (ABasic P f) = {P}"|
 "assertions (C1;; C2) = (assertions C1) \<union> (assertions C2)"|
 "assertions ({P} IF b THEN C1 ELSE C2 FI) = {P} \<union> (assertions C1) \<union> (assertions C2)"|
 "assertions ({P} WHILE b INV I DO C OD) = {P} \<union> {I} \<union> (assertions C)"|
 "assertions ({P} WAIT b END) = {P}"
 
 fun atomics::"acom \<Rightarrow> (assn \<times> com) set" where
-"atomics ({P} x ::= a) = {(P, x ::= a)}"|
+"atomics (ABasic P f) = {(P, Basic f)}"|
 "atomics (C1;; C2) = (atomics C1) \<union> (atomics C2)"|
 "atomics ({P} IF b THEN C1 ELSE C2 FI) = (atomics C1) \<union> (atomics C2)"|
 "atomics ({P} WHILE b INV I DO C OD) = (atomics C)"|
@@ -52,17 +52,33 @@ Parallel:  "\<lbrakk>\<forall>i \<in> Index Ts. \<exists>(c::acom) Q. (Ts!i) = (
     \<Longrightarrow> (\<turnstile>\<^sub>P {\<lambda> s . \<forall>i \<in> Index Ts. (pre (the (com(Ts!i)))) s} (Parallel Ts)
            {\<lambda> s . \<forall>i \<in> Index Ts. (post (Ts!i)) s})"|
 
-ParAssign: "\<turnstile>\<^sub>P {\<lambda>s. P (s[a/x])} (x ::= a) {Q}"  |
+ParBasic: "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (f s)\<rbrakk> \<Longrightarrow>\<turnstile>\<^sub>P {P} (ParBasic f) {Q}"  |
 
 ParSeq: "\<lbrakk> \<turnstile>\<^sub>P {P} c0 {R}; \<turnstile>\<^sub>P {R} c1 {Q} \<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P} (c0,, c1) {Q}"  |
 
 ParCond: "\<lbrakk> \<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c1 {Q}; \<turnstile>\<^sub>P {\<lambda>s. P s \<and> \<not>bval b s} c2 {Q}\<rbrakk>
     \<Longrightarrow> \<turnstile>\<^sub>P {P} (IF b THEN c1 ELSE c2 FI) {Q}"  |
 
-ParWhile: "\<lbrakk>\<turnstile>\<^sub>P {\<lambda>s. P s \<and> bval b s} c {P}\<rbrakk> \<Longrightarrow>
-       \<turnstile>\<^sub>P {P} (WHILE b INV I DO c OD) {\<lambda>s. P s \<and> \<not>bval b s}"  |
+ParWhile: "\<lbrakk>\<forall>s. P s \<longrightarrow> I s; \<turnstile>\<^sub>P {\<lambda>s. I s \<and> bval b s} c {I}; \<forall>s. I s \<and> \<not>bval b s \<longrightarrow> Q s\<rbrakk> \<Longrightarrow>
+       \<turnstile>\<^sub>P {P} (WHILE b INV I DO c OD) {Q}"  |
 
 ParConseq:"\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>P {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>P {P'} c {Q'}"
+
+inductive_cases PParallelE[elim!]:" \<turnstile>\<^sub>P {P} Parallel Ts {Q}"
+inductive_cases PSeqE[elim!]:" \<turnstile>\<^sub>P {P} (c0,, c1) {Q}"
+inductive_cases PIfE[elim!]:"\<turnstile>\<^sub>P {P} (IF b THEN c1 ELSE c2 FI) {Q}"
+inductive_cases PWhileE[elim!]:"\<turnstile>\<^sub>P {P} (WHILE b INV I DO c OD) {Q}"
+inductive_cases PBasicE[elim!]:"\<turnstile>\<^sub>P {P} (ParBasic f) {Q}"
+
+lemmas [simp] = hoare_par.Parallel hoare_par.ParBasic hoare_par.ParSeq hoare_par.ParCond hoare_par.ParWhile
+
+lemmas [intro!] = hoare_par.Parallel hoare_par.ParBasic hoare_par.ParSeq hoare_par.ParCond hoare_par.ParWhile
+
+lemma While':
+assumes "\<forall>s. P s \<longrightarrow> I s" and "\<turnstile>\<^sub>P {\<lambda>s. I s \<and> bval b s} C {I}" and "\<forall>s. I s \<and> \<not> bval b s \<longrightarrow> Q s"
+shows "\<turnstile>\<^sub>P {P} WHILE b INV I DO C OD {Q}"
+using assms(1) assms(2) assms(3) by blast
+
 
 section {* Soundness of the Owicki and Gries proof rules *}
 
@@ -158,11 +174,11 @@ proof(cases opt)
     from assms(1) None have 2:"\<forall>(R, r) \<in> (atomics c). \<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> R s} r {Q}" by force
     show ?thesis using assms(2) assms(1,3,4)
     proof (induction "Some c" s ro t arbitrary: c rule:small_step_induct)
-      case (Assign P x a s)
-      hence 3:"{(P, x ::= a)} = atomics ({P} x ::= a)" by simp
-      with Assign.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} x ::= a {Q}"
+      case (Basic P f s)
+      hence 3:"{(P, Basic f)} = atomics (ABasic P f)" by simp
+      with Basic.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} (Basic f) {Q}"
       by (metis (no_types, lifting) None hoare_valid_tr_def interfree.simps(2) singletonI splitD)
-      have 5:"Q s \<and> P s" using None Assign.prems(2,3) by auto
+      have 5:"Q s \<and> P s" using None Basic.prems(2,3) by auto
       show ?case using 4 5 None hoare_valid_tr_def by auto 
     qed (auto simp add:None) 
   next
@@ -172,14 +188,14 @@ proof(cases opt)
        (\<forall>P \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. P s \<and> R s} r {P}))" using Some assms(1) by auto
      show ?thesis using assms(2) assms(1,3,4)
     proof (induction "Some c" s ro t arbitrary: c rule:small_step_induct)
-    case (Assign P x a s)
-      hence 3:"{(P, x ::= a)} = atomics ({P} x ::= a)" by simp
-      with Assign.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} x ::= a {Q} \<and> 
-        (\<forall>R \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. R s \<and> P s} x ::= a {R})" 
+    case (Basic P f s)
+      hence 3:"{(P, Basic f)} = atomics (ABasic P f)" by simp
+      with Basic.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} (Basic f) {Q} \<and> 
+        (\<forall>R \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. R s \<and> P s} (Basic f) {R})" 
         by (metis (mono_tags, lifting) Some hoare_valid_tr_def interfree.simps(3) singletonI splitD)
-      have 5:"pre u s \<and> P s" using Some Assign.prems(2,3) by auto
+      have 5:"pre u s \<and> P s" using Some Basic.prems(2,3) by auto
       have 6:"pre u \<in> (assertions u)" by (simp add: assertions_inclusion) 
-      show ?case by (smt 4 5 6 Some hoare_valid_tr_def option.simps(5) small_step_tr.Assign star_step1)
+      show ?case by (smt 4 5 6 Some hoare_valid_tr_def option.simps(5) small_step_tr.Basic star_step1)
     qed (auto simp add:Some)
 qed
 
@@ -191,7 +207,6 @@ proof -
   using assms(1) ParallelE by auto
   have 42:"Rs = Ts[i := (ro, Q)]" using 41 by blast
   have 0:"Index Ts = Index Rs" using assms(1) index_unchanged by auto
-  thm INTERFREE_def
   { fix j k
     assume 5:"j \<in> Index Rs" and 6:"k \<in> Index Rs" and 7:"j \<noteq> k"
     have "interfree (com (Rs ! j), post (Rs ! j), com (Rs ! k))"

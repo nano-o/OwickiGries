@@ -7,7 +7,7 @@ subsection {* Step definitions *}
 inductive
   small_step :: "(acom option) * state \<Rightarrow> (acom option) * state \<Rightarrow> bool" (infix "\<rightarrow>" 55)
 where
-Assign:  "(Some({P} x ::= a), s) \<rightarrow> (None, s(x := aval a s))" |
+Basic:  "(Some(ABasic P f), s) \<rightarrow> (None, f s)" |
 
 Seq1:   "(Some(c0), s) \<rightarrow> (None, t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow> (Some(c1), t)" |
 Seq2:   "(Some(c0), s) \<rightarrow> (Some(c2), t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow> (Some(c2;; c1), t)" |
@@ -25,7 +25,7 @@ inductive
 where
 BNone: "(None, t) \<Rightarrow> t"|
 
-Assign:  "(Some({P} x ::= a), s) \<Rightarrow> s(x := aval a s)" |
+Basic:  "(Some(ABasic P f), s) \<Rightarrow> (f s)" |
 
 Seq:   "\<lbrakk>(Some(c0), s) \<Rightarrow> t; (Some(c1), t) \<Rightarrow> r\<rbrakk> \<Longrightarrow> (Some (c0;; c1), s) \<Rightarrow> r" |
 
@@ -49,7 +49,7 @@ subsubsection {* Traditional version *}
 inductive
   small_step_tr :: "(com option) * state \<Rightarrow> (com option) * state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>t\<^sub>r" 55)
 where
-Assign:  "(Some(x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r (None, s(x := aval a s))" |
+Basic:  "(Some(Basic f), s) \<rightarrow>\<^sub>t\<^sub>r (None, f s)" |
 
 Seq1:   "(Some(c0), s) \<rightarrow>\<^sub>t\<^sub>r (None, t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c1), t)" |
 Seq2:   "(Some(c0), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c2), t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c2;; c1), t)" |
@@ -67,7 +67,7 @@ inductive
 where
 BNone:  "(None, t) \<Rightarrow>\<^sub>t\<^sub>r t"|
 
-Assign:  "(Some(x ::= a), s) \<Rightarrow>\<^sub>t\<^sub>r s(x := aval a s)" |
+Basic:  "(Some(Basic f), s) \<Rightarrow>\<^sub>t\<^sub>r (f s)" |
 
 Seq:   "\<lbrakk>(Some(c0), s) \<Rightarrow>\<^sub>t\<^sub>r t; (Some(c1), t) \<Rightarrow>\<^sub>t\<^sub>r r\<rbrakk> \<Longrightarrow> (Some (c0;; c1), s) \<Rightarrow>\<^sub>t\<^sub>r r" |
 
@@ -102,17 +102,15 @@ declare small_step.intros[simp, intro]
 
 text{* Rule inversion: *}
 
-inductive_cases AssignE[elim!]: "(Some({P} x ::= a), s) \<rightarrow> ct"
-thm AssignE
+inductive_cases BasicE[elim!]: "(Some(ABasic P f), s) \<rightarrow> ct"
 inductive_cases SeqE[elim]: "(Some(c1;; c2), s) \<rightarrow> ct"
 inductive_cases IfE[elim!]: "(Some({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> ct"
-thm IfE
 inductive_cases WhileE[elim]: "(Some({P} WHILE b INV I DO c OD), s) \<rightarrow> ct"
 inductive_cases WaitE[elim]: "(Some({P} WAIT b END), s) \<rightarrow> ct"
 
 inductive_cases small_step_cases:
     "(None,s) \<rightarrow> (c', s')"
-    "(Some ({P} x ::= a),s) \<rightarrow> (c', s')"
+    "(Some (ABasic P f),s) \<rightarrow> (c', s')"
     "(Some (c1;; c2), s) \<rightarrow> (c', s')"
     "(Some ({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> (c', s')"
     "(Some ({P} WHILE b INV I DO c OD), s) \<rightarrow> (c', s')"
@@ -120,22 +118,22 @@ inductive_cases small_step_cases:
 
 
 inductive_cases BNoneE[elim!]: "(None, s) \<Rightarrow> t"
-inductive_cases BAssignE[elim!]: "(Some {P} x ::= a, s) \<Rightarrow> t"
+inductive_cases BBasicE[elim!]: "(Some (ABasic P f), s) \<Rightarrow> t"
 inductive_cases BSeqE[elim!]: "(Some c1;;c2, s1) \<Rightarrow> t"
 inductive_cases BIfE[elim!]: "(Some {P} IF b THEN c1 ELSE c2 FI, s) \<Rightarrow> t"
 inductive_cases BWhileE[elim]: "(Some {P} WHILE b INV I DO c OD, s) \<Rightarrow> t"
 inductive_cases BWaitE[elim]: "(Some {P} WAIT b END, s) \<Rightarrow> t"
 
 inductive_cases BTNoneE[elim!]: "(None, s) \<Rightarrow>\<^sub>t\<^sub>r t"
-inductive_cases BTAssignE[elim!]: "(Some x ::= a, s) \<Rightarrow>\<^sub>t\<^sub>r t"
+inductive_cases BTBasicE[elim!]: "(Some (Basic f), s) \<Rightarrow>\<^sub>t\<^sub>r t"
 inductive_cases BTSeqE[elim!]: "(Some c1;;c2, s1) \<Rightarrow>\<^sub>t\<^sub>r t"
 inductive_cases BTIfE[elim!]: "(Some IF b THEN c1 ELSE c2 FI, s) \<Rightarrow>\<^sub>t\<^sub>r t"
 inductive_cases BTWhileE[elim]: "(Some WHILE b INV I DO c OD, s) \<Rightarrow>\<^sub>t\<^sub>r t"
 inductive_cases BTWaitE[elim]: "(Some WAIT b END, s) \<Rightarrow>\<^sub>t\<^sub>r t"
 
 lemma assign_simp:
-  "(Some {P} x ::= a, s) \<Rightarrow> s' <-> (s' = s(x := aval a s))"
-using big_step.Assign by auto
+  "(Some (ABasic P f), s) \<Rightarrow> s' <-> (s' = (f s))"
+using big_step.Basic by auto
  
 
 text {* An example combining rule inversion and derivations *}
@@ -169,7 +167,7 @@ declare small_step_tr.intros[simp,intro]
 
 text{* Rule inversion: *}
 
-inductive_cases AssignTE[elim!]: "(Some(x ::= a), s) \<rightarrow>\<^sub>t\<^sub>r ct"
+inductive_cases BasicTE[elim!]: "(Some(Basic f), s) \<rightarrow>\<^sub>t\<^sub>r ct"
 inductive_cases SeqTE[elim]: "(Some(c1;; c2), s) \<rightarrow>\<^sub>t\<^sub>r ct"
 inductive_cases IfTE[elim!]: "(Some(IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>t\<^sub>r ct"
 inductive_cases WhileTE[elim]: "(Some(WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>t\<^sub>r ct"
@@ -275,7 +273,7 @@ lemma big_to_small:
 proof (induction rule: big_step.induct)
   case (BNone t) thus ?case by simp
 next
-  case (Assign P x a s) thus ?case by blast 
+  case (Basic P f s) thus ?case by blast 
 next
   case (Seq c1 s r c2 t)
   assume "(Some c1, s) \<rightarrow>* (None, r)" and "(Some c2, r) \<rightarrow>* (None, t)"
@@ -318,7 +316,7 @@ lemma  "cs \<Rightarrow> t \<Longrightarrow> cs \<rightarrow>* (None, t)"
 proof (induction rule: big_step.induct)
   case BNone show ?case by simp
 next
-  case Assign show ?case by blast
+  case Basic show ?case by blast
 next
   case Seq thus ?case by (blast intro: seq_comp)
 next
@@ -337,8 +335,8 @@ qed
 lemma small_big_continue:
   "cs \<rightarrow> cs' \<Longrightarrow> cs' \<Rightarrow> t \<Longrightarrow> cs \<Rightarrow> t"
 proof (induction arbitrary: t rule: small_step.induct)
-  case (Assign P x a s t)
-  thus ?case using big_step.Assign big_to_small final_det by blast
+  case (Basic P f s t)
+  thus ?case using big_step.Basic big_to_small final_det by blast
 next
   case (Seq1 c1 s r c2 t)
   thus ?case using big_step.BNone big_step.Seq by blast 
@@ -447,7 +445,7 @@ lemma big_to_small_tr:
 proof (induction rule: big_step_tr.induct)
   case (BNone t) thus ?case by simp
 next
-  case (Assign x a s) thus ?case by blast 
+  case (Basic f s) thus ?case by blast 
 next
   case (Seq c1 s r c2 t)
   assume "(Some c1, s) \<rightarrow>\<^sub>t\<^sub>r* (None, r)" and "(Some c2, r) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
@@ -486,7 +484,7 @@ lemma  "cs \<Rightarrow>\<^sub>t\<^sub>r t \<Longrightarrow> cs \<rightarrow>\<^
 proof (induction rule: big_step_tr.induct)
   case BNone show ?case by simp
 next
-  case Assign show ?case by blast
+  case Basic show ?case by blast
 next
   case Seq thus ?case by (blast intro: seq_comp_tr)
 next
@@ -505,8 +503,8 @@ qed
 lemma small_big_continue_tr:
   "cs \<rightarrow>\<^sub>t\<^sub>r cs' \<Longrightarrow> cs' \<Rightarrow>\<^sub>t\<^sub>r t \<Longrightarrow> cs \<Rightarrow>\<^sub>t\<^sub>r t"
 proof (induction arbitrary: t rule: small_step_tr.induct)
-  case (Assign x a s t)
-  thus ?case using big_step_tr.Assign big_to_small_tr final_det_tr by blast
+  case (Basic f s t)
+  thus ?case using big_step_tr.Basic big_to_small_tr final_det_tr by blast
 next
   case (Seq1 c1 s r c2 t)
   thus ?case using BNone big_step_tr.Seq by blast
@@ -545,8 +543,8 @@ subsection {* New big step implies traditional big step *}
 
 lemma big_implies_big_tr:"(Some C, s) \<Rightarrow> t \<Longrightarrow> (Some (strip C), s) \<Rightarrow>\<^sub>t\<^sub>r t"
 proof(induct "(Some C, s)" t arbitrary:C s rule:big_step.induct)
-  case (Assign P x a s) 
-    thus ?case using big_step_tr.Assign by auto
+  case (Basic P f s) 
+    thus ?case using big_step_tr.Basic by auto
 next
   case (Seq c0 s t c1 r) thus ?case using big_step_tr.Seq by auto
 next

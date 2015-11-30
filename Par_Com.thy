@@ -4,7 +4,7 @@ begin
 
 datatype par_com =
   Parallel   "((acom option \<times> assn) list)"|
-  ParAssign  vname aexp              ("_ ::= _")|
+  ParBasic  "state \<Rightarrow> state"          |
   ParSeq     par_com par_com         ("_,, _") |
   ParCond    bexp par_com par_com    ("IF _ THEN _ ELSE _ FI")|
   ParWhile   bexp assn par_com       ("WHILE _ INV _ DO _ OD")
@@ -45,7 +45,7 @@ where
 Paral:  "\<lbrakk>i \<in> Index Cs; Cs!i = (Some c, Q); (Some c, s) \<rightarrow> (ro, t)\<rbrakk> \<Longrightarrow>
   (Parallel Cs, s) \<rightarrow>\<^sub>P (Parallel(Cs[i := (ro, Q)]), t)"|
 
-PAssign:  "(x ::= a, s) \<rightarrow>\<^sub>P (Parallel [], s(x := aval a s))" |
+PBasic:  "(ParBasic f, s) \<rightarrow>\<^sub>P (Parallel [], f s)" |
 
 PSeq1:   "All_None Ts \<Longrightarrow> ((Parallel Ts,, c), s) \<rightarrow>\<^sub>P (c, s)" |
 PSeq2:   "(c0, s) \<rightarrow>\<^sub>P (c2, t) \<Longrightarrow> ((c0,, c1), s) \<rightarrow>\<^sub>P ((c2,, c1), t)" |
@@ -73,10 +73,9 @@ declare par_trans.intros[simp,intro]
 text{* Rule inversion: *}
 
 inductive_cases ParallelE[elim]: "((Parallel Cs), s) \<rightarrow>\<^sub>P ct"
-inductive_cases PBasicE[elim!]: "(x ::= a, s) \<rightarrow>\<^sub>P ct"
+inductive_cases PBasicE[elim!]: "(ParBasic f, s) \<rightarrow>\<^sub>P ct"
 inductive_cases PSeqE[elim]: "((c1,, c2), s) \<rightarrow>\<^sub>P ct"
 inductive_cases PIfE[elim!]: "((IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>P ct"
 inductive_cases PWhileE[elim]: "((WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>P ct"
-
 
 end

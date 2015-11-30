@@ -19,7 +19,7 @@ where "s[a/x] == s(x := aval a s)"
 inductive
   hoare :: "acom \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile> ((_)/ {(1_)})" 50)
 where
-Assign: "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (s[a/x])\<rbrakk> \<Longrightarrow> \<turnstile> ({P} x ::= a) {Q}"  |
+Basic: "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (f s)\<rbrakk> \<Longrightarrow> \<turnstile> (ABasic P f) {Q}"  |
 
 Seq: "\<lbrakk> \<turnstile> c0 {pre(c1)}; \<turnstile> c1 {Q} \<rbrakk> \<Longrightarrow> \<turnstile> (c0;; c1) {Q}"  |
 
@@ -35,20 +35,20 @@ Wait: "\<lbrakk>\<And> s . P s \<and> bval b s \<Longrightarrow> Q s\<rbrakk> \<
 
 Conseq:"\<lbrakk>\<turnstile> c {Q}; \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile> c {Q'}"
 
-inductive_cases AssignE:" \<turnstile> ({P} x ::= a) {Q}"
+inductive_cases BasicE:" \<turnstile> (ABasic P f) {Q}"
 inductive_cases SeqE:" \<turnstile> (c0;; c1) {Q}"
 inductive_cases IfE:"\<turnstile> ({P} IF b THEN c1 ELSE c2 FI) {Q}"
 inductive_cases WhileE:" \<turnstile> ({P} WHILE b INV I DO c OD) {Q}"
 inductive_cases WaitE:" \<turnstile> ({P} WAIT b END) {Q}"
 
-lemmas [simp] = hoare.Assign hoare.Seq hoare.If
+lemmas [simp] = hoare.Basic hoare.Seq hoare.If hoare.While hoare.Wait
 
-lemmas [intro!] = hoare.Assign hoare.Seq hoare.If
+lemmas [intro!] = hoare.Basic hoare.Seq hoare.If hoare.While hoare.Wait
 
 inductive
   hoare_tr :: "assn \<Rightarrow> com \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile>\<^sub>t\<^sub>r ({(1_)}/ (_)/ {(1_)})" 50)
 where
-Assign:  "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (s[a/x])\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} x ::= a {Q}"  |
+Basic:  "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (f s)\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} (Basic f) {Q}"  |
 
 Seq: "\<lbrakk> \<turnstile>\<^sub>t\<^sub>r {P} c1 {Q};  \<turnstile>\<^sub>t\<^sub>r {Q} c2 {R} \<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} c1;;c2 {R}"  |
 
@@ -63,16 +63,16 @@ Wait:"\<lbrakk>\<forall>s. P s \<and> bval b s \<longrightarrow> Q s\<rbrakk> \<
 conseq: "\<lbrakk> \<forall>s. P' s \<longrightarrow> P s; \<turnstile>\<^sub>t\<^sub>r {P} c {Q};  \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk>
         \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P'} c {Q'}"
 
-lemmas [simp] = hoare_tr.Assign hoare_tr.Seq hoare_tr.If
+lemmas [simp] = hoare_tr.Basic hoare_tr.Seq hoare_tr.If hoare_tr.While hoare_tr.Wait
 
-lemmas [intro!] = hoare_tr.Assign hoare_tr.Seq hoare_tr.If
+lemmas [intro!] = hoare_tr.Basic hoare_tr.Seq hoare_tr.If hoare_tr.While hoare_tr.Wait
 
 section {* Equivalence of provability in the new and traditional systems *}
 
 lemma new_implies_tr: "\<turnstile> C {Q} \<Longrightarrow> \<exists>c. \<turnstile>\<^sub>t\<^sub>r {pre C} c {Q} \<and> strip C = c"
 proof(induction rule:hoare.induct)
-  case (Assign P a x)
-    show ?case by (simp add: Assign.hyps hoare_tr.Assign) 
+  case (Basic P f)
+    show ?case by (simp add: Basic.hyps hoare_tr.Basic) 
 next
   case (Seq C0 C1 Q)
     show ?case using Seq.IH(1) Seq.IH(2) hoare_tr.Seq by auto
@@ -96,9 +96,9 @@ qed
 
 lemma tr_implies_new:"\<turnstile>\<^sub>t\<^sub>r {P} c {Q} \<Longrightarrow> \<exists>C. (strip C = c) \<and> (\<turnstile> C {Q}) \<and> (\<forall>s. P s \<longrightarrow> pre (C) s)"
 proof(induction rule:hoare_tr.induct)
-  case (Assign P Q a x)
-    obtain C::acom where 1:"C = {P} x ::= a" by simp
-    with this have "\<turnstile> C {Q}" by (simp add: Assign.hyps)
+  case (Basic P Q f)
+    obtain C::acom where 1:"C = ABasic P f" by simp
+    with this have "\<turnstile> C {Q}" by (simp add: Basic.hyps)
     thus ?case using 1 by force
 next
   case (Seq P c1 Q c2 R)
@@ -139,7 +139,7 @@ section {* Soundness  *}
 
 lemma hoare_sound_tr: "\<turnstile>\<^sub>t\<^sub>r {P} C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {P} C {Q}"
 proof(induct rule:hoare_tr.induct)
-  case (Assign P Q a x) thus ?case using hoare_valid_tr_def small_to_big_tr by blast
+  case (Basic P Q f) thus ?case using hoare_valid_tr_def small_to_big_tr by blast
 next
   case (Seq P c1 Q c2 R) thus ?case by (smt BTSeqE big_to_small_tr hoare_valid_tr_def small_to_big_tr) 
 next
@@ -165,7 +165,48 @@ next
   }
   thus ?case by (metis While.hyps(1) While.hyps(4) hoare_valid_tr_def small_to_big_tr) 
 qed
- 
+
+lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q}\<Longrightarrow> \<Turnstile> C {Q}"
+proof(induct arbitrary:C Q rule:hoare.induct)
+  case (Basic P Q f C Q')
+    thus ?case by (metis big_implies_big_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
+next
+  case (Seq c1 c2 Q C Q')
+    thus ?case by (metis big_implies_big_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
+next
+  case (Wait P b Q C Q')
+    thus ?case by (metis big_implies_big_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
+next
+  case (Conseq c Q Q' C R)
+    thus ?case by blast 
+next
+  case (If c1 Q P b c2 C Q')
+  {
+    fix s t
+    have "(Some {P} IF b THEN c1 ELSE c2 FI, s) \<Rightarrow> t \<Longrightarrow> P s \<Longrightarrow> Q t"
+    proof(induction "Some {P} IF b THEN c1 ELSE c2 FI" s t rule: big_step_induct)
+      case IfFalse thus ?case by (metis If.hyps(2) If.hyps(4) If.hyps(6) big_to_small hoare_sound_tr hoare_valid_def new_implies_tr) 
+    next
+      case IfTrue thus ?case using If.hyps(1) If.hyps(2) If.hyps(3) big_to_small hoare_sound_tr hoare_valid_def new_implies_tr 
+      by metis
+    qed
+  }
+  thus ?case by (simp add: If.hyps(2) If.prems) 
+next
+  case (While P I b c Q C Q')
+  {
+    fix s t
+    have "(Some {I} WHILE b INV I DO c OD, s) \<Rightarrow> t  \<Longrightarrow> I s  \<Longrightarrow>  I t \<and> \<not> bval b t"
+    proof(induction "Some {I} WHILE b INV I DO c OD" s t rule: big_step_induct)
+      case WhileFalse thus ?case by (simp add: While.hyps(1)) 
+    next
+      case (WhileTrue s s1 t) 
+        thus ?case using While.hyps(2) While.hyps(3) big_implies_big_tr big_to_small_tr hoare_sound_tr hoare_valid_tr_def new_implies_tr by fastforce
+    qed
+  }
+  thus ?case by (simp add: While.hyps(4) While.prems)
+qed
+
 lemma valid_implies_valid_tr: "\<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
 by (metis big_implies_big_tr big_iff_small big_to_small_tr hoare_valid_def hoare_valid_tr_def)
 
@@ -177,15 +218,13 @@ section {* Strong soundness *}
 
 text {* At each step, the state reached satisfies the precondition of the current command. *}
 
-thm small_step.induct
-thm hoare.induct
 
 lemma strong_sound_1:
   assumes 1:"(Some c, s) \<rightarrow> (ro, t)" and 2:"pre(c) s" and 3:"\<turnstile> c {Q}"
   shows "case ro of Some r \<Rightarrow> pre(r) t \<and>  \<turnstile> r {Q}| None \<Rightarrow> Q t"
   using assms(3) assms(1,2)
 proof (induct c Q arbitrary: ro t s rule:hoare.induct)
-  case (Assign) thus ?case by auto
+  case (Basic) thus ?case by auto
 next
   case (Seq) thus ?case by (smt hoare.Seq is_none_code(2) is_none_simps(1) option.case_eq_if option.sel pre.simps(2) small_step_cases(3))
 next
@@ -198,6 +237,7 @@ next
 next
   case (Conseq) thus ?case by (metis (no_types, lifting) hoare.Conseq option.case_eq_if)
 qed
+
 
 lemma strong_sound:
   assumes "(Some c, s) \<rightarrow>* (ro, t)" and "pre(c) s" and "\<turnstile> c {Q}" 
