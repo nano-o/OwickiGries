@@ -42,6 +42,7 @@ and executing r leads to a P state.*}
 "interfree(Some c, Q, Some a) = (\<forall>(R, r) \<in> (atomics a). \<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> R s} r {Q} \<and> 
                                  (\<forall>P \<in> (assertions c).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. P s \<and> R s} r {P}))"
 
+
 definition INTERFREE::"((acom option \<times> assn) list) \<Rightarrow> bool" where
 "INTERFREE Ts \<equiv> (\<forall>i \<in> Index Ts. \<forall>j \<in> Index Ts. i \<noteq> j \<longrightarrow> interfree(com(Ts ! i), post(Ts ! i), com(Ts!j)))"
 

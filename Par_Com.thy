@@ -16,7 +16,7 @@ fun Index2 where
   "Index2 [] = {}"
 | "Index2 (x#xs) = Index2 xs \<union> {length (xs)}"
 
-lemma "Index xs = Index2 xs"
+lemma Index_Equal:"Index xs = Index2 xs"
 proof (induct xs)
   case Nil
   show ?case by (simp add:Index_def)

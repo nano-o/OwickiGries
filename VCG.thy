@@ -2,6 +2,93 @@ theory VCG
 imports Proof_Par
 begin
 
+text{* Verification condition for the traditional definition: *}
+
+fun pre_tr :: "com \<Rightarrow> assn \<Rightarrow> assn" where
+"pre_tr (Basic f) Q = (\<lambda>s. Q (f s))" |
+"pre_tr (c1;; c2) Q = pre_tr c1 (pre_tr c2 Q)" |
+"pre_tr (IF b THEN c1 ELSE c2 FI) Q = (\<lambda>s. if bval b s then pre_tr c1 Q s else pre_tr c2 Q s)"|
+"pre_tr (WHILE b INV I DO C OD) Q = I"|
+"pre_tr (WAIT b END) Q = Q"
+
+fun vc_tr :: "com \<Rightarrow> assn \<Rightarrow> bool" where
+"vc_tr (Basic f) Q = True" |
+"vc_tr (c1;; c2) Q = ((vc_tr c1 (pre_tr c2 Q)) \<and> (vc_tr c2 Q))" |
+"vc_tr (IF b THEN c1 ELSE c2 FI) Q = (vc_tr c1 Q \<and> vc_tr c2 Q)" |
+"vc_tr (WHILE b INV I DO c OD) Q =
+  ((\<forall>s. (I s \<and> bval b s \<longrightarrow> pre_tr c I s) \<and> (I s \<and> \<not> bval b s \<longrightarrow> Q s)) \<and> vc_tr c I)"|
+"vc_tr (WAIT b END) Q = True"
+
+text {* Soundness: *}
+
+lemma vc_sound_tr: "vc_tr c Q \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {pre_tr c Q} c {Q}"
+proof(induction c arbitrary: Q)
+  case (Basic f Q) thus ?case by simp
+next
+  case (Seq c1 c2 Q) thus ?case by auto 
+next
+  case (Cond b c1 c2 Q) 
+    thus ?case by (smt conseq hoare_tr.If pre_tr.simps(3) vc_tr.simps(3)) 
+next
+  case (While b I C Q)
+  hence pre:"\<forall>s. (I s \<and> bval b s \<longrightarrow> pre_tr C I s)" and 
+  post:"\<forall>s. (I s \<and> \<not> bval b s \<longrightarrow> Q s)" and vc:"vc_tr C I" by simp_all
+  hence "\<turnstile>\<^sub>t\<^sub>r {pre_tr C I} C {I}" using While.IH by blast
+  hence "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. I s \<and> bval b s} C {I}" using conseq pre by auto
+  thus ?case by (simp add: post) 
+next
+  case (Wait b Q)  thus ?case by simp
+qed
+
+corollary vc_sound_tr':
+  "\<lbrakk>vc_tr C Q; \<forall>s. P s \<longrightarrow> pre_tr C Q s\<rbrakk> \<Longrightarrow> \<turnstile>\<^sub>t\<^sub>r {P} C {Q}"
+using conseq vc_sound_tr by blast
+
+
+text{* Completeness: *}
+
+lemma pre_mono_tr:
+  "\<forall>s. P s \<longrightarrow> P' s \<Longrightarrow> pre_tr C P s \<Longrightarrow> pre_tr C P' s"
+proof (induction C arbitrary: P P' s)
+  case Seq thus ?case by simp metis
+qed simp_all
+
+lemma vc_mono_tr:
+  "\<forall>s. Q s \<longrightarrow> Q' s \<Longrightarrow> vc_tr C Q \<Longrightarrow> vc_tr C Q'"
+proof(induction C arbitrary: Q Q')
+  case (Seq C1 C2 Q Q')
+  thus ?case by (metis pre_mono_tr vc_tr.simps(2)) 
+qed simp_all
+
+(*lemma vc_complete_par:
+ "\<turnstile>\<^sub>t\<^sub>r {P} C {Q} \<Longrightarrow> vc_tr C Q \<and> (\<forall>s. P s \<longrightarrow> pre_tr C Q s)"
+  (is "_ \<Longrightarrow> ?G P C Q")
+proof (induction rule: hoare_tr.induct)
+  case (Basic P Q f)
+  show ?case (is "?C C") by (simp add: Basic.hyps) 
+next
+  case (Seq P C1 Q C2 R)
+  hence ih1: "?G P C1 Q" by blast
+  hence ih2: "?G Q C2 R" using Seq.IH(2) by blast 
+  show ?case (is "?C C") using ih1 ih2 pre_mono_tr vc_mono_tr by auto
+next
+  case conseq thus ?case using vc_mono_tr pre_mono_tr by auto
+next
+  case (If P b C1 Q C2)
+  hence ih1: "?G (\<lambda>s. P s \<and> bval b s) C1 Q" by blast
+  hence ih2: "?G (\<lambda>s. P s \<and> \<not>bval b s) C2 Q" by (simp add: If.IH(2)) 
+  show ?case by (simp add: ih1 ih2) 
+next
+  case (While P I b C Q)
+  hence ih: "?G (\<lambda>s. I s \<and> bval b s) C I" by blast
+  thus ?case by (simp add: While.hyps(1) While.hyps(3)) 
+next
+  case (Wait P b Q)
+  hence "\<forall>s. P s \<longrightarrow> Q s"
+  thus ?case
+qed*)
+
+
 text{* Verification condition: *}
 
 fun vc :: "acom \<Rightarrow> assn \<Rightarrow> bool" where
@@ -87,7 +174,8 @@ fun pre_par :: "par_com \<Rightarrow> assn \<Rightarrow> assn" where
 "pre_par (WHILE b INV I DO C OD) Q = I"
 
 fun vc_par :: "par_com \<Rightarrow> assn \<Rightarrow> bool" where
-"vc_par (Parallel Ts) Q = ((\<forall>i \<in> Index Ts. \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})) \<and> INTERFREE Ts \<and> (\<forall>t. (\<lambda>s. \<forall>i \<in> Index Ts. (post (Ts!i)) s) t \<longrightarrow> Q t))" |
+"vc_par (Parallel Ts) Q = ((\<forall>i \<in> Index Ts. \<exists>(c::acom) Q. (Ts!i) = (Some c, Q) \<and> (\<turnstile> c {Q})) 
+    \<and> INTERFREE Ts \<and> (\<forall>t. (\<lambda>s. \<forall>i \<in> Index Ts. (post (Ts!i)) s) t \<longrightarrow> Q t))" |
 "vc_par (ParBasic f) Q = True" |
 "vc_par (C1,, C2) Q = ((vc_par C1 (pre_par C2 Q)) \<and> (vc_par C2 Q))" |
 "vc_par (IF b THEN C1 ELSE C2 FI) Q = (vc_par C1 Q \<and> vc_par C2 Q)" |
@@ -98,7 +186,7 @@ text {* Soundness: *}
 
 lemma vc_sound_par: "vc_par C Q \<Longrightarrow> \<turnstile>\<^sub>P {pre_par C Q} C {Q}"
 proof(induction C arbitrary: Q)
-  case (ParBasic Ts Q) thus ?case by simp
+  case (ParBasic f Q) thus ?case by simp
 next
   case (ParSeq C1 C2 Q) thus ?case by auto 
 next
