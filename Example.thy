@@ -1,6 +1,8 @@
 theory Example
-imports VCG
+imports VCG  "~~/src/HOL/Eisbach/Eisbach_Tools"
 begin
+
+section {* Increment by two example *}
 
 text {* Goal: \<turnstile>\<^sub>P {x = 0} x := x+1 || x:= x+1 {x = 2} *}
 
@@ -85,5 +87,30 @@ proof -
   thus ?thesis using ParConseq
     by smt
 qed
+
+section {* Let's try to automate the proof *}
+
+text {* Note: difference between a goal state of the form "A ==> B" and assumes "A" shows "B",
+  i.e. local context vs goal state. This influences how automated methods work (even intro) *}
+
+text {* auto_solve starts by computing the set of indices, then applies ParConseq and Parallel, and 
+solves as many goals as possible with simp and force. Only the INTERFREE goal should then remain.
+At this point, auto_solve tries to finish by inserting hoare_sound_tr and calling force. *}
+
+method auto_solve = 
+(match conclusion in "\<turnstile>\<^sub>P {P} Parallel cs {Q}" for P cs Q \<Rightarrow> 
+  \<open>insert Index_Equal[of cs], 
+    simp,
+    rule ParConseq[where ?P = "\<lambda> s . \<forall>i \<in> Index cs. (pre (the (com(cs!i)))) s" 
+    and ?Q="\<lambda> s . \<forall>i \<in> Index cs. (post (cs!i)) s"];
+    (rule Parallel)?;
+    (simp? | force?)\<close>),
+(simp only:INTERFREE_def), 
+simp; 
+insert hoare_sound_tr,
+force
+
+lemma "\<turnstile>\<^sub>P {\<lambda>s. s ''x'' = 0 \<and> s ''d1'' = 0 \<and> s ''d2'' = 0} Parallel Ts {\<lambda>s. s ''x'' = 2}"
+by auto_solve
 
 end
