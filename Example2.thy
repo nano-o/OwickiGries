@@ -4,37 +4,34 @@ begin
 
 text {* 
 Annotated program: 
-  {f0 = 0 /\ d0 = 0 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1) /\ (d1 = 2 --> f1 = 1 /\ t = 0)
+  {f0 = 0 /\ d0 = 0 /\  (d1 = 2 --> f1 = 1 /\ t = 0)
     /\ (d1 = 3 --> f1 = 1 /\ t = 0) /\ (d1 = 4 --> f1 = 0)} 
   f0 := 1;; d0 := d0 + 1;;
-  {f0 = 1 /\ d0 = 1 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1) /\ (d1 = 2 --> f1 = 1 /\ t = 0)
+  {f0 = 1 /\ d0 = 1 /\  (d1 = 2 --> f1 = 1 /\ t = 0)
     /\ (d1 = 3 --> f1 = 1 /\ t = 0) /\ (d1 = 4 --> f1 = 0)} 
   t := 1;; d0 := d0 + 1;;
-  {f0 = 1 /\ d0 = 2 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1)
+  {f0 = 1 /\ d0 = 2
      /\ (d1 = 2 --> f1 = 1 /\ (t = 0 \/ t = 1)) /\ (d1 = 3 --> f1 = 1 /\ t = 1) /\ (d1 = 4 --> f1 = 0)} 
   WAIT (t = 0 \/ f1 = 0) END;; 
-  {f0 = 1 /\ d0 = 2 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1)
-     /\ (d1 = 2 --> f1 = 1 /\ t = 0) /\ (d1 = 3 --> False) /\ (d1 = 4 --> f1 = 0)} 
+  {f0 = 1 /\ d0 = 2 
+     /\ (d1 = 2 --> t = 0) /\ (d1 = 3 --> False) /\ (d1 = 4 --> f1 = 0)} 
   skip;; d0 := d0 + 1;;
-  {f0 = 1 /\ d0 = 3 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1)
-     /\ (d1 = 2 --> f1 = 1 /\ t = 0) /\ (d1 = 3 --> False) /\ (d1 = 4 --> f1 = 0)}
-  flag0 := 0;; d0 := d0 + 1;;
+  {f0 = 1 /\ d0 = 3
+     /\ (d1 = 2 --> t = 0) /\ (d1 = 3 --> False) /\ (d1 = 4 --> f1 = 0)}
+  f0 := 0;; d0 := d0 + 1;;
   {f0 = 0 /\ d0 = 4} 
   || 
-  {f1 = 0 /\ d1 = 0 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1) /\ (d0 = 2 --> f0 = 1 /\ t = 1)
-    /\ (d0 = 3 --> f0 = 1 /\ t = 1) /\ (d0 = 4 --> f0 = 0)} 
+  {f1 = 0 /\ d1 = 0 /\ (d0 = 2 --> f0 = 1 /\ t = 1)
+    /\ (d0 = 3 --> f0 = 1 /\ t = 1)} 
   f1 := 1;; d1 := d1 + 1;;
-  {f1 = 1 /\ d1 = 1 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1) /\ (d0 = 2 --> f0 = 1 /\ t = 1)
-    /\ (d0 = 3 --> f0 = 1 /\ t = 1) /\ (d0 = 4 --> f0 = 0)} 
+  {f1 = 1 /\ d1 = 1 /\ (d0 = 2 --> f0 = 1 /\ t = 1)
+    /\ (d0 = 3 --> f0 = 1 /\ t = 1)} 
   t := 0;; d1 := d1 + 1;;
-  {f1 = 1 /\ d1 = 2 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1)
-     /\ (d0 = 2 --> f0 = 1 /\ (t = 0 \/ t = 1)) /\ (d0 = 3 --> f0 = 1 /\ t = 0) /\ (d0 = 4 --> f0 = 0)}
+  {f1 = 1 /\ d1 = 2 /\ (d0 = 2 --> f0 = 1 /\ (t = 0 \/ t = 1)) /\ (d0 = 3 --> f0 = 1 /\ t = 0) }
   WAIT (f0 = 0 || t = 1) END; 
-  {f1 = 1 /\ d1 = 2 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1)
-     /\ (d0 = 2 --> f0 = 1 /\ t = 1) /\ (d0 = 3 --> False) /\ (d0 = 4 --> f0 = 0)}
+  {f1 = 1 /\ d1 = 2 /\ (d0 = 2 --> t = 1) /\ (d0 = 3 --> False)}
   skip; d1 := d1 + 1;;
-  {f1 = 1 /\ d1 = 3 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1)
-     /\ (d0 = 2 --> f0 = 1 /\ t = 1) /\ (d0 = 3 --> False) /\ (d0 = 4 --> f0 = 0)}
+  {f1 = 1 /\ d1 = 3 /\ (d0 = 2 --> t = 1) /\ (d0 = 3 --> False)}
   f1 := 0;; d1 := d1 + 1;;
   {f1 = 0 /\ d1 = 4}
 
@@ -47,21 +44,16 @@ definition Equal::"aexp \<Rightarrow> aexp \<Rightarrow> bexp" where "Equal a1 a
 lemma or_bval:"bval (Or b1 b2) s = (bval b1 s \<or> bval b2 s)" by (metis Or_def bval.simps(2) bval_And_if)
 lemma equal_bval:"bval (Equal a1 a2) s = (aval a1 s = aval a2 s)" by (smt Equal_def bval.simps(2) bval.simps(4) bval_And_if) 
 
-abbreviation pre10 :: "assn" where "pre10 \<equiv> \<lambda>s. s ''f0'' = 0 \<and> s ''d0'' = 0 \<and> (s ''d1'' = 0 \<longrightarrow> s ''f1'' = 0)
-  \<and> (s ''d1'' = 1 \<longrightarrow> s ''f1'' = 1) \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))
-  \<and> (s ''d1'' = 4 \<longrightarrow> s ''f1'' = 0)"
-abbreviation pre11 :: "assn" where "pre11 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 1 \<and> (s ''d1'' = 0 \<longrightarrow> s ''f1'' = 0)
-  \<and> (s ''d1'' = 1 \<longrightarrow> s ''f1'' = 1) \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))
-  \<and> (s ''d1'' = 4 \<longrightarrow> s ''f1'' = 0)"
-abbreviation pre12 :: "assn" where "pre12 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 2 \<and> (s ''d1'' = 0 \<longrightarrow> s ''f1'' = 0)
-  \<and> (s ''d1'' = 1 \<longrightarrow> s ''f1'' = 1) \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> (s ''t'' = 0 \<or> s ''t'' = 1))) 
-  \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 1)) \<and> (s ''d1'' = 4 \<longrightarrow> s ''f1'' = 0)"
-abbreviation pre13 :: "assn" where "pre13 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 2 \<and> (s ''d1'' = 0 \<longrightarrow> s ''f1'' = 0)
-  \<and> (s ''d1'' = 1 \<longrightarrow> s ''f1'' = 1) \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) 
-  \<and> (s ''d1'' = 3 \<longrightarrow> False) \<and> (s ''d1'' = 4 \<longrightarrow> s ''f1'' = 0)"
-abbreviation pre14 :: "assn" where "pre14 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 3 \<and> (s ''d1'' = 0 \<longrightarrow> s ''f1'' = 0)
-  \<and> (s ''d1'' = 1 \<longrightarrow> s ''f1'' = 1) \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) 
-  \<and> (s ''d1'' = 3 \<longrightarrow> False) \<and> (s ''d1'' = 4 \<longrightarrow> s ''f1'' = 0)"
+abbreviation pre10 :: "assn" where "pre10 \<equiv> \<lambda>s. s ''f0'' = 0 \<and> s ''d0'' = 0  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))
+  "
+abbreviation pre11 :: "assn" where "pre11 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 1  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))
+  "
+abbreviation pre12 :: "assn" where "pre12 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 2  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> (s ''t'' = 0 \<or> s ''t'' = 1))) 
+  \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 1)) "
+abbreviation pre13 :: "assn" where "pre13 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 2  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''t'' = 0)) 
+  \<and> (s ''d1'' = 3 \<longrightarrow> False) "
+abbreviation pre14 :: "assn" where "pre14 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 3  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''t'' = 0)) 
+  \<and> (s ''d1'' = 3 \<longrightarrow> False) "
 
 abbreviation assign11  :: "state \<Rightarrow> state" where "assign11 \<equiv> \<lambda>s. s(''f0'' := 1, ''d0'' := s ''d0'' + 1)"
 abbreviation assign12  :: "state \<Rightarrow> state" where "assign12 \<equiv> \<lambda>s. s(''t'' := 1, ''d0'' := s ''d0'' + 1)"
@@ -78,21 +70,16 @@ by (simp add: insert_commute)
 
 lemma assertion_p1:"(assertions p1) = {pre10, pre11, pre12, pre13, pre14}" by auto
 
-abbreviation pre20 :: "assn" where "pre20 \<equiv> \<lambda>s. s ''f1'' = 0 \<and> s ''d1'' = 0 \<and> (s ''d0'' = 0 \<longrightarrow> s ''f0'' = 0)
-  \<and> (s ''d0'' = 1 \<longrightarrow> s ''f0'' = 1) \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1))
-  \<and> (s ''d0'' = 4 \<longrightarrow> s ''f0'' = 0)"
-abbreviation pre21 :: "assn" where "pre21 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 1 \<and> (s ''d0'' = 0 \<longrightarrow> s ''f0'' = 0)
-  \<and> (s ''d0'' = 1 \<longrightarrow> s ''f0'' = 1) \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1))
-  \<and> (s ''d0'' = 4 \<longrightarrow> s ''f0'' = 0)"
-abbreviation pre22 :: "assn" where "pre22 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 2 \<and> (s ''d0'' = 0 \<longrightarrow> s ''f0'' = 0)
-  \<and> (s ''d0'' = 1 \<longrightarrow> s ''f0'' = 1) \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> (s ''t'' = 0 \<or> s ''t'' = 1))) 
-  \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 0)) \<and> (s ''d0'' = 4 \<longrightarrow> s ''f0'' = 0)"
-abbreviation pre23 :: "assn" where "pre23 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 2 \<and> (s ''d0'' = 0 \<longrightarrow> s ''f0'' = 0)
-  \<and> (s ''d0'' = 1 \<longrightarrow> s ''f0'' = 1) \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) 
-  \<and> (s ''d0'' = 3 \<longrightarrow> False) \<and> (s ''d0'' = 4 \<longrightarrow> s ''f0'' = 0)"
-abbreviation pre24 :: "assn" where "pre24 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 3 \<and> (s ''d0'' = 0 \<longrightarrow> s ''f0'' = 0)
-  \<and> (s ''d0'' = 1 \<longrightarrow> s ''f0'' = 1) \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) 
-  \<and> (s ''d0'' = 3 \<longrightarrow> False) \<and> (s ''d0'' = 4 \<longrightarrow> s ''f0'' = 0)"
+abbreviation pre20 :: "assn" where "pre20 \<equiv> \<lambda>s. s ''f1'' = 0 \<and> s ''d1'' = 0  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1))
+ "
+abbreviation pre21 :: "assn" where "pre21 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 1  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1))
+ "
+abbreviation pre22 :: "assn" where "pre22 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 2  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> (s ''t'' = 0 \<or> s ''t'' = 1))) 
+  \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 0))"
+abbreviation pre23 :: "assn" where "pre23 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 2  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''t'' = 1)) 
+  \<and> (s ''d0'' = 3 \<longrightarrow> False)"
+abbreviation pre24 :: "assn" where "pre24 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 3  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''t'' = 1)) 
+  \<and> (s ''d0'' = 3 \<longrightarrow> False)"
 
 abbreviation assign21  :: "state \<Rightarrow> state" where "assign21 \<equiv> \<lambda>s. s(''f1'' := 1, ''d1'' := s ''d1'' + 1)"
 abbreviation assign22  :: "state \<Rightarrow> state" where "assign22 \<equiv> \<lambda>s. s(''t'' := 0, ''d1'' := s ''d1'' + 1)"
