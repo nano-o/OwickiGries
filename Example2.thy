@@ -4,32 +4,41 @@ begin
 
 text {* 
 Annotated program: 
-  {@{term "flag0 = 0"}} 
-  flag0 := 1;; 
-  {flag0 = 1}
-  turn := 1;; 
-  {flag0 = 1 /\ (turn = 0 \/ turn = 1)}
-  WAIT turn = 0 \/ flag1 = 0;; 
-  {flag0 = 1 /\ (flag1 = 0 \/ turn = 0)}
-  skip;; 
-  {flag0 = 1 /\ (flag1 = 0 \/ turn = 0)}
-  flag0 := 0
-  {@{term "flag0 = 0"}} 
+  {f0 = 0 /\ d0 = 0 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1) /\ (d1 = 2 --> f1 = 1 /\ t = 0)
+    /\ (d1 = 3 --> f1 = 1 /\ t = 0) /\ (d1 = 4 --> f1 = 0)} 
+  f0 := 1;; d0 := d0 + 1;;
+  {f0 = 1 /\ d0 = 1 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1) /\ (d1 = 2 --> f1 = 1 /\ t = 0)
+    /\ (d1 = 3 --> f1 = 1 /\ t = 0) /\ (d1 = 4 --> f1 = 0)} 
+  t := 1;; d0 := d0 + 1;;
+  {f0 = 1 /\ d0 = 2 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1)
+     /\ (d1 = 2 --> f1 = 1 /\ (t = 0 \/ t = 1)) /\ (d1 = 3 --> f1 = 1 /\ t = 1) /\ (d1 = 4 --> f1 = 0)} 
+  WAIT (t = 0 \/ f1 = 0) END;; 
+  {f0 = 1 /\ d0 = 2 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1)
+     /\ (d1 = 2 --> f1 = 1 /\ t = 0) /\ (d1 = 3 --> False) /\ (d1 = 4 --> f1 = 0)} 
+  skip;; d0 := d0 + 1;;
+  {f0 = 1 /\ d0 = 3 /\ (d1 = 0 --> f1 = 0) /\ (d1 = 1 --> f1 = 1)
+     /\ (d1 = 2 --> f1 = 1 /\ t = 0) /\ (d1 = 3 --> False) /\ (d1 = 4 --> f1 = 0)}
+  flag0 := 0;; d0 := d0 + 1;;
+  {f0 = 0 /\ d0 = 4} 
   || 
-  {@{term "flag1 = 0"}} 
-  flag1 := 1;;
-  {flag1 = 1}
-  turn := 0;;
-  {flag1 = 1 /\ (turn = 0 \/ turn = 1)}
-  WAIT (flag0 = false || turn = 1) END; 
-  {flag1 = 1 /\ (flag0 = 0 \/ turn = 1)} 
-  skip; 
-  {flag1 = 1 /\ (flag0 = 0 \/ turn = 1)}
-  flag1 := 0
-  {@{term "flag1 = 0"}}
+  {f1 = 0 /\ d1 = 0 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1) /\ (d0 = 2 --> f0 = 1 /\ t = 1)
+    /\ (d0 = 3 --> f0 = 1 /\ t = 1) /\ (d0 = 4 --> f0 = 0)} 
+  f1 := 1;; d1 := d1 + 1;;
+  {f1 = 1 /\ d1 = 1 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1) /\ (d0 = 2 --> f0 = 1 /\ t = 1)
+    /\ (d0 = 3 --> f0 = 1 /\ t = 1) /\ (d0 = 4 --> f0 = 0)} 
+  t := 0;; d1 := d1 + 1;;
+  {f1 = 1 /\ d1 = 2 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1)
+     /\ (d0 = 2 --> f0 = 1 /\ (t = 0 \/ t = 1)) /\ (d0 = 3 --> f0 = 1 /\ t = 0) /\ (d0 = 4 --> f0 = 0)}
+  WAIT (f0 = 0 || t = 1) END; 
+  {f1 = 1 /\ d1 = 2 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1)
+     /\ (d0 = 2 --> f0 = 1 /\ t = 1) /\ (d0 = 3 --> False) /\ (d0 = 4 --> f0 = 0)}
+  skip; d1 := d1 + 1;;
+  {f1 = 1 /\ d1 = 3 /\ (d0 = 0 --> f0 = 0) /\ (d0 = 1 --> f0 = 1)
+     /\ (d0 = 2 --> f0 = 1 /\ t = 1) /\ (d0 = 3 --> False) /\ (d0 = 4 --> f0 = 0)}
+  f1 := 0;; d1 := d1 + 1;;
+  {f1 = 0 /\ d1 = 4}
 
-Goal: \<turnstile>\<^sub>P {True} WHILE True DO flag0 := true; turn := 1; wait (flag1 = false || turn = 0); {flag0 = true /\ (flag1 = false \/ turn = 0)} skip; flag0 := false
-  || WHILE True DO flag1 := true; turn := 0; wait (flag0 = false || turn = 1); {flag1 = true /\ (flag0 = false \/ turn = 1)} skip; flag1 := false {True}
+Goal: \<turnstile>\<^sub>P {f0 = 0 /\ f1 = 0 /\ d0 = 0 /\ d1 = 0} Parallel Ts {f0 = 0 /\ f1 = 0 /\ d0 = 4 /\ d1 = 4}
 *}
 
 definition Or::"bexp \<Rightarrow> bexp \<Rightarrow> bexp" where "Or b1 b2 \<equiv> Not (And (Not b1) (Not b2))"
