@@ -104,7 +104,7 @@ method auto_solve =
     rule ParConseq[where ?P = "\<lambda> s . \<forall>i \<in> Index cs. (pre (the (com(cs!i)))) s" 
     and ?Q="\<lambda> s . \<forall>i \<in> Index cs. (post (cs!i)) s"];
     (rule Parallel)?;
-    (simp? | force?)\<close>),
+    (simp?)\<close>),
 (simp only:INTERFREE_def), 
 simp; 
 insert hoare_sound_tr,

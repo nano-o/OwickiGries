@@ -1,33 +1,26 @@
 theory Example2
-imports VCG
+imports VCG "~~/src/HOL/Eisbach/Eisbach_Tools"
 begin
 
 text {* 
 Annotated program: 
-  {f0 = 0 /\ d0 = 0 /\  (d1 = 2 --> f1 = 1 /\ t = 0)
-    /\ (d1 = 3 --> f1 = 1 /\ t = 0) /\ (d1 = 4 --> f1 = 0)} 
+  {f0 = 0 /\ d0 = 0 /\  (d1 = 2 --> f1 = 1 /\ t = 0) /\ (d1 = 3 --> f1 = 1 /\ t = 0)} 
   f0 := 1;; d0 := d0 + 1;;
-  {f0 = 1 /\ d0 = 1 /\  (d1 = 2 --> f1 = 1 /\ t = 0)
-    /\ (d1 = 3 --> f1 = 1 /\ t = 0) /\ (d1 = 4 --> f1 = 0)} 
+  {f0 = 1 /\ d0 = 1 /\  (d1 = 2 --> f1 = 1 /\ t = 0) /\ (d1 = 3 --> f1 = 1 /\ t = 0)} 
   t := 1;; d0 := d0 + 1;;
-  {f0 = 1 /\ d0 = 2
-     /\ (d1 = 2 --> f1 = 1 /\ (t = 0 \/ t = 1)) /\ (d1 = 3 --> f1 = 1 /\ t = 1) /\ (d1 = 4 --> f1 = 0)} 
+  {f0 = 1 /\ d0 = 2 /\ (d1 = 2 --> f1 = 1 /\ (t = 0 \/ t = 1)) /\ (d1 = 3 --> f1 = 1 /\ t = 1)} 
   WAIT (t = 0 \/ f1 = 0) END;; 
-  {f0 = 1 /\ d0 = 2 
-     /\ (d1 = 2 --> t = 0) /\ (d1 = 3 --> False) /\ (d1 = 4 --> f1 = 0)} 
+  {f0 = 1 /\ d0 = 2 /\ (d1 = 2 --> t = 0) /\ (d1 = 3 --> False)} 
   skip;; d0 := d0 + 1;;
-  {f0 = 1 /\ d0 = 3
-     /\ (d1 = 2 --> t = 0) /\ (d1 = 3 --> False) /\ (d1 = 4 --> f1 = 0)}
+  {f0 = 1 /\ d0 = 3 /\ (d1 = 2 --> t = 0) /\ (d1 = 3 --> False)}
   f0 := 0;; d0 := d0 + 1;;
   {f0 = 0 /\ d0 = 4} 
   || 
-  {f1 = 0 /\ d1 = 0 /\ (d0 = 2 --> f0 = 1 /\ t = 1)
-    /\ (d0 = 3 --> f0 = 1 /\ t = 1)} 
+  {f1 = 0 /\ d1 = 0 /\ (d0 = 2 --> f0 = 1 /\ t = 1) /\ (d0 = 3 --> f0 = 1 /\ t = 1)} 
   f1 := 1;; d1 := d1 + 1;;
-  {f1 = 1 /\ d1 = 1 /\ (d0 = 2 --> f0 = 1 /\ t = 1)
-    /\ (d0 = 3 --> f0 = 1 /\ t = 1)} 
+  {f1 = 1 /\ d1 = 1 /\ (d0 = 2 --> f0 = 1 /\ t = 1) /\ (d0 = 3 --> f0 = 1 /\ t = 1)} 
   t := 0;; d1 := d1 + 1;;
-  {f1 = 1 /\ d1 = 2 /\ (d0 = 2 --> f0 = 1 /\ (t = 0 \/ t = 1)) /\ (d0 = 3 --> f0 = 1 /\ t = 0) }
+  {f1 = 1 /\ d1 = 2 /\ (d0 = 2 --> f0 = 1 /\ (t = 0 \/ t = 1)) /\ (d0 = 3 --> f0 = 1 /\ t = 0)}
   WAIT (f0 = 0 || t = 1) END; 
   {f1 = 1 /\ d1 = 2 /\ (d0 = 2 --> t = 1) /\ (d0 = 3 --> False)}
   skip; d1 := d1 + 1;;
@@ -44,10 +37,10 @@ definition Equal::"aexp \<Rightarrow> aexp \<Rightarrow> bexp" where "Equal a1 a
 lemma or_bval:"bval (Or b1 b2) s = (bval b1 s \<or> bval b2 s)" by (metis Or_def bval.simps(2) bval_And_if)
 lemma equal_bval:"bval (Equal a1 a2) s = (aval a1 s = aval a2 s)" by (smt Equal_def bval.simps(2) bval.simps(4) bval_And_if) 
 
-abbreviation pre10 :: "assn" where "pre10 \<equiv> \<lambda>s. s ''f0'' = 0 \<and> s ''d0'' = 0  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))
-  "
-abbreviation pre11 :: "assn" where "pre11 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 1  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))
-  "
+abbreviation pre10 :: "assn" where "pre10 \<equiv> \<lambda>s. s ''f0'' = 0 \<and> s ''d0'' = 0  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) 
+  \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))"
+abbreviation pre11 :: "assn" where "pre11 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 1  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) 
+  \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))"
 abbreviation pre12 :: "assn" where "pre12 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 2  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> (s ''t'' = 0 \<or> s ''t'' = 1))) 
   \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 1)) "
 abbreviation pre13 :: "assn" where "pre13 \<equiv> \<lambda>s. s ''f0'' = 1 \<and> s ''d0'' = 2  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''t'' = 0)) 
@@ -65,15 +58,10 @@ abbreviation post1 :: "assn" where "post1 \<equiv> \<lambda>s. s ''f0'' = 0 \<an
 abbreviation p1::"acom" where "p1 \<equiv> (((((ABasic (pre10) assign11);; ABasic (pre11) assign12);;
 ({pre12} WAIT (Or (Equal (V ''f1'') (N 0)) (Equal (V ''t'') (N 0))) END));; (ABasic (pre13) assign13));; (ABasic (pre14) assign14))"
 
-lemma atomic_p1:"(atomics p1) = {(pre10, Basic assign11),(pre11, Basic assign12),(pre13, Basic assign13),(pre14, Basic assign14)}"
-by (simp add: insert_commute)
-
-lemma assertion_p1:"(assertions p1) = {pre10, pre11, pre12, pre13, pre14}" by auto
-
-abbreviation pre20 :: "assn" where "pre20 \<equiv> \<lambda>s. s ''f1'' = 0 \<and> s ''d1'' = 0  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1))
- "
-abbreviation pre21 :: "assn" where "pre21 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 1  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1))
- "
+abbreviation pre20 :: "assn" where "pre20 \<equiv> \<lambda>s. s ''f1'' = 0 \<and> s ''d1'' = 0  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) 
+  \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) "
+abbreviation pre21 :: "assn" where "pre21 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 1  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) 
+  \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 1)) "
 abbreviation pre22 :: "assn" where "pre22 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 2  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''f0'' = 1 \<and> (s ''t'' = 0 \<or> s ''t'' = 1))) 
   \<and> (s ''d0'' = 3 \<longrightarrow> (s ''f0'' = 1 \<and> s ''t'' = 0))"
 abbreviation pre23 :: "assn" where "pre23 \<equiv> \<lambda>s. s ''f1'' = 1 \<and> s ''d1'' = 2  \<and> (s ''d0'' = 2 \<longrightarrow> (s ''t'' = 1)) 
@@ -90,6 +78,13 @@ abbreviation post2 :: "assn" where "post2 \<equiv> \<lambda>s. s ''f1'' = 0 \<an
 
 abbreviation p2::"acom" where "p2 \<equiv> (((((ABasic (pre20) assign21);; ABasic (pre21) assign22);;
 ({pre22} WAIT (Or (Equal (V ''f0'') (N 0)) (Equal (V ''t'') (N 1))) END));; (ABasic (pre23) assign23));; (ABasic (pre24) assign24))"
+
+abbreviation Ts::"(acom option \<times> assn) list" where "Ts \<equiv> [(Some p1, post1),(Some p2, post2)]"
+
+lemma atomic_p1:"(atomics p1) = {(pre10, Basic assign11),(pre11, Basic assign12),(pre13, Basic assign13),(pre14, Basic assign14)}"
+by (simp add: insert_commute)
+
+lemma assertion_p1:"(assertions p1) = {pre10, pre11, pre12, pre13, pre14}" by auto
 
 lemma atomic_p2:"(atomics p2) = {(pre20, Basic assign21),(pre21, Basic assign22),(pre23, Basic assign23),(pre24, Basic assign24)}"
 by (simp add: insert_commute)
@@ -166,7 +161,6 @@ proof-
   show ?thesis using 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 by auto
 qed
   
-
 lemma interf_12_post:"\<forall>(R, r) \<in> (atomics p1). \<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. post2 s \<and> R s} r {post2}"
 proof -
   have "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. post2 s \<and> pre10 s} Basic assign11 {post2}" by simp
@@ -225,8 +219,6 @@ proof -
   show ?thesis using 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 by auto
 qed
 
-abbreviation Ts::"(acom option \<times> assn) list" where "Ts \<equiv> [(Some p1, post1),(Some p2, post2)]"
-
 lemma "\<turnstile>\<^sub>P {\<lambda>s. s ''f0'' = 0 \<and> s ''d0'' = 0 \<and> s ''f1'' = 0 \<and> s ''d1'' = 0} Parallel Ts {\<lambda>s. s ''f0'' = 0 \<and> s ''d0'' = 4 \<and> s ''f1'' = 0 \<and> s ''d1'' = 4}"
 proof -
   have Ind:"Index Ts = {0, Suc 0}"
@@ -267,5 +259,17 @@ proof -
   hence "\<turnstile>\<^sub>P {\<lambda> s . pre10 s \<and> pre20 s} (Parallel Ts) {\<lambda>s. post1 s \<and> post2 s}" using pre post by auto
   thus ?thesis using ParConseq by smt
 qed
+
+lemma "\<turnstile>\<^sub>P {\<lambda> s . \<forall>i \<in> Index Ts. (pre (the (com(Ts!i)))) s} (Parallel Ts) {\<lambda> s . \<forall>i \<in> Index Ts. (post (Ts!i)) s}"
+  (is "\<turnstile>\<^sub>P {?P} Parallel ?cs {?Q}")
+apply(rule Parallel)
+apply(simp_all)
+apply(insert equal_bval or_bval Index_Equal[of ?cs])
+apply(auto)
+apply(simp only:INTERFREE_def)
+apply simp
+apply(insert insert hoare_sound_tr)
+apply(force)
+done
 
 end
