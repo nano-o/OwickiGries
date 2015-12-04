@@ -7,9 +7,11 @@ type_synonym assn = "state \<Rightarrow> bool"
 datatype com =
   Basic "state \<Rightarrow> state"      |
   Seq   com com          ("_;; _") |
-  Cond bexp com com      ("IF _ THEN _ ELSE _ FI")|
+  Cond "state \<Rightarrow> bool" com com      ("IF _ THEN _ ELSE _ FI")|
   While bexp assn com    ("WHILE _ INV _ DO _ OD")|
   Wait bexp              ("WAIT _ END")
+
+term "IF (\<lambda> s . s ''x'' = 1) THEN Basic id ELSE Basic id FI"
 
 datatype acom =
   ABasic assn "state \<Rightarrow> state"      |
