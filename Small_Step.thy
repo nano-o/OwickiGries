@@ -5,23 +5,23 @@ begin
 subsection {* Step definitions *}
 
 inductive
-  small_step :: "(acom option) * state \<Rightarrow> (acom option) * state \<Rightarrow> bool" (infix "\<rightarrow>" 55)
+  small_step :: "(acom option) * newstate \<Rightarrow> (acom option) * newstate \<Rightarrow> bool" (infix "\<rightarrow>" 55)
 where
 Basic:  "(Some(ABasic P f), s) \<rightarrow> (None, f s)" |
 
 Seq1:   "(Some(c0), s) \<rightarrow> (None, t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow> (Some(c1), t)" |
 Seq2:   "(Some(c0), s) \<rightarrow> (Some(c2), t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow> (Some(c2;; c1), t)" |
 
-IfTrue:  "bval b s \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> (Some c1, s)" |
-IfFalse: "\<not>bval b s \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> (Some c2, s)" |
+IfTrue:  "\<forall>s. b s \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> (Some c1, s)" |
+IfFalse: "\<forall>s. \<not>b s \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> (Some c2, s)" |
 
-WhileFalse: "\<not>bval b s \<Longrightarrow> (Some ({P} WHILE b INV I DO c OD), s) \<rightarrow> (None, s)" |
-WhileTrue:"bval b s \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<rightarrow> (Some(c;; ({I} WHILE b INV I DO c OD)), s)"|
+WhileFalse: "\<forall>s. \<not>b s \<Longrightarrow> (Some ({P} WHILE b INV I DO c OD), s) \<rightarrow> (None, s)" |
+WhileTrue:"\<forall>s. b s \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<rightarrow> (Some(c;; ({I} WHILE b INV I DO c OD)), s)"|
 
-Wait:"bval b s \<Longrightarrow> (Some({P} WAIT b END), s) \<rightarrow> (None, s)"
+Wait:"\<forall>s. b s \<Longrightarrow> (Some({P} WAIT b END), s) \<rightarrow> (None, s)"
 
 inductive
-  big_step :: "(acom option) * state \<Rightarrow> state \<Rightarrow> bool" (infix "\<Rightarrow>" 55)
+  big_step :: "(acom option) * newstate \<Rightarrow> newstate \<Rightarrow> bool" (infix "\<Rightarrow>" 55)
 where
 BNone: "(None, t) \<Rightarrow> t"|
 
@@ -29,41 +29,41 @@ Basic:  "(Some(ABasic P f), s) \<Rightarrow> (f s)" |
 
 Seq:   "\<lbrakk>(Some(c0), s) \<Rightarrow> t; (Some(c1), t) \<Rightarrow> r\<rbrakk> \<Longrightarrow> (Some (c0;; c1), s) \<Rightarrow> r" |
 
-IfTrue:  "\<lbrakk>bval b s; (Some(c1), s) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<Rightarrow> t" |
-IfFalse: "\<lbrakk>\<not>bval b s; (Some(c2), s) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<Rightarrow> t" |
+IfTrue:  "\<lbrakk>\<forall>s. b s; (Some(c1), s) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<Rightarrow> t" |
+IfFalse: "\<lbrakk>\<forall>s. \<not>b s; (Some(c2), s) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} IF b THEN c1 ELSE c2 FI), s) \<Rightarrow> t" |
 
-WhileFalse: "\<not>bval b s \<Longrightarrow> (Some ({P} WHILE b INV I DO c OD), s) \<Rightarrow> s" |
-WhileTrue:"\<lbrakk>bval b s; (Some c, s) \<Rightarrow> s1; (Some({I} WHILE b INV I DO c OD), s1) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<Rightarrow> t"|
+WhileFalse: "\<forall>s. \<not>b s \<Longrightarrow> (Some ({P} WHILE b INV I DO c OD), s) \<Rightarrow> s" |
+WhileTrue:"\<lbrakk>\<forall>s. b s; (Some c, s) \<Rightarrow> s1; (Some({I} WHILE b INV I DO c OD), s1) \<Rightarrow> t\<rbrakk> \<Longrightarrow> (Some({P} WHILE b INV I DO c OD), s) \<Rightarrow> t"|
 
-Wait:"bval b s \<Longrightarrow> (Some({P} WAIT b END), s) \<Rightarrow> s"
+Wait:"\<forall>s. b s \<Longrightarrow> (Some({P} WAIT b END), s) \<Rightarrow> s"
 
 code_pred big_step .
 lemmas big_step_induct = big_step.induct[split_format(complete)]
 
 abbreviation
-  small_steps :: "(acom option) * state \<Rightarrow> (acom option) * state \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
+  small_steps :: "(acom option) * newstate \<Rightarrow> (acom option) * newstate \<Rightarrow> bool" (infix "\<rightarrow>*" 55)
 where "x \<rightarrow>* y == star small_step x y"
 
 subsubsection {* Traditional version *}
 
 inductive
-  small_step_tr :: "(com option) * state \<Rightarrow> (com option) * state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>t\<^sub>r" 55)
+  small_step_tr :: "(com option) * newstate \<Rightarrow> (com option) * newstate \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>t\<^sub>r" 55)
 where
 Basic:  "(Some(Basic f), s) \<rightarrow>\<^sub>t\<^sub>r (None, f s)" |
 
 Seq1:   "(Some(c0), s) \<rightarrow>\<^sub>t\<^sub>r (None, t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c1), t)" |
 Seq2:   "(Some(c0), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c2), t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c2;; c1), t)" |
 
-IfTrue:  "bval b s \<Longrightarrow> (Some(IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c1), s)" |
-IfFalse: "\<not>bval b s \<Longrightarrow> (Some(IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c2), s)" |
+IfTrue:  "\<forall>s. b s \<Longrightarrow> (Some(IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c1), s)" |
+IfFalse: "\<forall>s. \<not>b s \<Longrightarrow> (Some(IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c2), s)" |
 
-WhileFalse: "\<not>bval b s \<Longrightarrow> (Some (WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>t\<^sub>r (None, s)" |
-WhileTrue:"bval b s \<Longrightarrow> (Some(WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c;; (WHILE b INV I DO c OD)), s)"|
+WhileFalse: "\<forall>s. \<not>b s \<Longrightarrow> (Some (WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>t\<^sub>r (None, s)" |
+WhileTrue:"\<forall>s. b s \<Longrightarrow> (Some(WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>t\<^sub>r (Some(c;; (WHILE b INV I DO c OD)), s)"|
 
-Wait:"bval b s \<Longrightarrow> (Some(WAIT b END), s) \<rightarrow>\<^sub>t\<^sub>r (None, s)"
+Wait:"\<forall>s. b s \<Longrightarrow> (Some(WAIT b END), s) \<rightarrow>\<^sub>t\<^sub>r (None, s)"
 
 inductive
-  big_step_tr :: "(com option) * state \<Rightarrow> state \<Rightarrow> bool" (infix "\<Rightarrow>\<^sub>t\<^sub>r" 55)
+  big_step_tr :: "(com option) * newstate \<Rightarrow> newstate \<Rightarrow> bool" (infix "\<Rightarrow>\<^sub>t\<^sub>r" 55)
 where
 BNone:  "(None, t) \<Rightarrow>\<^sub>t\<^sub>r t"|
 
@@ -71,19 +71,19 @@ Basic:  "(Some(Basic f), s) \<Rightarrow>\<^sub>t\<^sub>r (f s)" |
 
 Seq:   "\<lbrakk>(Some(c0), s) \<Rightarrow>\<^sub>t\<^sub>r t; (Some(c1), t) \<Rightarrow>\<^sub>t\<^sub>r r\<rbrakk> \<Longrightarrow> (Some (c0;; c1), s) \<Rightarrow>\<^sub>t\<^sub>r r" |
 
-IfTrue:  "\<lbrakk>bval b s; (Some(c1), s) \<Rightarrow>\<^sub>t\<^sub>r t\<rbrakk> \<Longrightarrow> (Some(IF b THEN c1 ELSE c2 FI), s) \<Rightarrow>\<^sub>t\<^sub>r t" |
-IfFalse: "\<lbrakk>\<not>bval b s; (Some(c2), s) \<Rightarrow>\<^sub>t\<^sub>r t\<rbrakk> \<Longrightarrow> (Some(IF b THEN c1 ELSE c2 FI), s) \<Rightarrow>\<^sub>t\<^sub>r t" |
+IfTrue:  "\<lbrakk>\<forall>s. b s; (Some(c1), s) \<Rightarrow>\<^sub>t\<^sub>r t\<rbrakk> \<Longrightarrow> (Some(IF b THEN c1 ELSE c2 FI), s) \<Rightarrow>\<^sub>t\<^sub>r t" |
+IfFalse: "\<lbrakk>\<forall>s. \<not>b s; (Some(c2), s) \<Rightarrow>\<^sub>t\<^sub>r t\<rbrakk> \<Longrightarrow> (Some(IF b THEN c1 ELSE c2 FI), s) \<Rightarrow>\<^sub>t\<^sub>r t" |
 
-WhileFalse: "\<not>bval b s \<Longrightarrow> (Some (WHILE b INV I DO c OD), s) \<Rightarrow>\<^sub>t\<^sub>r s" |
-WhileTrue:"\<lbrakk>bval b s; (Some c, s) \<Rightarrow>\<^sub>t\<^sub>r s1; (Some(WHILE b INV I DO c OD), s1) \<Rightarrow>\<^sub>t\<^sub>r t\<rbrakk> \<Longrightarrow> (Some(WHILE b INV I DO c OD), s) \<Rightarrow>\<^sub>t\<^sub>r t"|
+WhileFalse: "\<forall>s. \<not>b s \<Longrightarrow> (Some (WHILE b INV I DO c OD), s) \<Rightarrow>\<^sub>t\<^sub>r s" |
+WhileTrue:"\<lbrakk>\<forall>s. b s; (Some c, s) \<Rightarrow>\<^sub>t\<^sub>r s1; (Some(WHILE b INV I DO c OD), s1) \<Rightarrow>\<^sub>t\<^sub>r t\<rbrakk> \<Longrightarrow> (Some(WHILE b INV I DO c OD), s) \<Rightarrow>\<^sub>t\<^sub>r t"|
 
-Wait:"bval b s \<Longrightarrow> (Some(WAIT b END), s) \<Rightarrow>\<^sub>t\<^sub>r s"
+Wait:"\<forall>s. b s \<Longrightarrow> (Some(WAIT b END), s) \<Rightarrow>\<^sub>t\<^sub>r s"
 
 code_pred big_step_tr.
 lemmas big_step_tr_induct = big_step_tr.induct[split_format(complete)]
 
 abbreviation
-  small_steps_tr :: "(com option) * state \<Rightarrow> (com option) * state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>t\<^sub>r*" 55)
+  small_steps_tr :: "(com option) * newstate \<Rightarrow> (com option) * newstate \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>t\<^sub>r*" 55)
 where "x \<rightarrow>\<^sub>t\<^sub>r* y == star small_step_tr x y"
 
 subsection{* Executability *}
@@ -279,36 +279,36 @@ next
   assume "(Some c1, s) \<rightarrow>* (None, r)" and "(Some c2, r) \<rightarrow>* (None, t)"
   thus ?case by (rule seq_comp)
 next
-  case (IfTrue b s c1 t P c2)
-  assume "bval b s"
+  case (IfTrue b c1 s t P c2)
+  assume "\<forall>s. b s"
   hence "(Some {P} IF b THEN c1 ELSE c2 FI, s) \<rightarrow> (Some c1, s)"  by simp
   moreover assume "(Some c1, s) \<rightarrow>* (None, t)"
   ultimately 
   show ?case by (metis star.simps)
 next
-  case (IfFalse b s c2 t P c1)
-  assume "\<not>bval b s"
+  case (IfFalse b c2 s t P c1)
+  assume "\<forall>s. \<not>b s"
   hence "(Some {P} IF b THEN c1 ELSE c2 FI, s) \<rightarrow> (Some c2, s)" by simp
   moreover assume "(Some c2, s) \<rightarrow>* (None, t)"
   ultimately 
   show ?case by (metis star.simps)
 next
-  case (WhileFalse b s P I c)
-  assume b: "\<not> bval b s"
+  case (WhileFalse b P I c s)
+  assume b: "\<forall>s. \<not>b s"
   show ?case by (simp add: b) 
 next
-  case (WhileTrue b s c s1 I t P)
+  case (WhileTrue b c s s1 I t P)
   let ?w  = "{I} WHILE b INV I DO c OD"
   let ?if = "c;; {I} WHILE b INV I DO c OD"
   assume w: "(Some ?w, s1) \<rightarrow>* (None, t)"
   assume c: "(Some c, s) \<rightarrow>* (None, s1)"
-  assume b: "bval b s"
+  assume b: "\<forall>s. b s"
   have "(Some ?w, s) \<rightarrow> (Some ?if, s)" using WhileTrue.hyps(3) b by blast 
   moreover have "(Some ?if, s) \<rightarrow>* (None, t)" using c seq_comp w by blast 
   ultimately show ?case 
     by (meson b small_step.WhileTrue star.step) 
 next
-  case (Wait b s P)
+  case (Wait b P s)
   thus ?case by blast 
 qed
 
@@ -451,28 +451,28 @@ next
   assume "(Some c1, s) \<rightarrow>\<^sub>t\<^sub>r* (None, r)" and "(Some c2, r) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
   thus ?case by (rule seq_comp_tr)
 next
-  case (IfTrue b s c1 t c2)
-  assume "bval b s"
+  case (IfTrue b c1 s t c2)
+  assume "\<forall>s. b s"
   hence "(Some IF b THEN c1 ELSE c2 FI, s) \<rightarrow>\<^sub>t\<^sub>r (Some c1, s)"  by simp
   moreover assume "(Some c1, s) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
   ultimately show ?case by (metis star.simps)
 next
-  case (IfFalse b s c2 t c1)
-  assume "\<not>bval b s"
+  case (IfFalse b c2 s t c1)
+  assume "\<forall>s. \<not>b s"
   hence "(Some IF b THEN c1 ELSE c2 FI, s) \<rightarrow>\<^sub>t\<^sub>r (Some c2, s)" by simp
   moreover assume "(Some c2, s) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
   ultimately show ?case by (metis star.simps)
 next
-  case (WhileFalse b s I c)
-  assume b: "\<not> bval b s"
+  case (WhileFalse b I c s)
+  assume b: "\<forall>s. \<not>b s"
   show ?case by (simp add: b) 
 next
-  case (WhileTrue b s c s1 I t)
+  case (WhileTrue b c s s1 I t)
   let ?w  = "WHILE b INV I DO c OD"
   let ?if = "c;; WHILE b INV I DO c OD"
   assume w: "(Some ?w, s1) \<rightarrow>\<^sub>t\<^sub>r* (None, t)"
   assume c: "(Some c, s) \<rightarrow>\<^sub>t\<^sub>r* (None, s1)"
-  assume b: "bval b s"
+  assume b: "\<forall>s. b s"
   have "(Some ?w, s) \<rightarrow>\<^sub>t\<^sub>r (Some ?if, s)" using WhileTrue.hyps(3) b by blast 
   moreover have "(Some ?if, s) \<rightarrow>\<^sub>t\<^sub>r* (None, t)" using c seq_comp_tr w by blast 
   ultimately show ?case by (metis WhileTrue.hyps(2) WhileTrue.hyps(3) b small_step_tr.WhileTrue star.step) 
@@ -503,29 +503,21 @@ qed
 lemma small_big_continue_tr:
   "cs \<rightarrow>\<^sub>t\<^sub>r cs' \<Longrightarrow> cs' \<Rightarrow>\<^sub>t\<^sub>r t \<Longrightarrow> cs \<Rightarrow>\<^sub>t\<^sub>r t"
 proof (induction arbitrary: t rule: small_step_tr.induct)
-  case (Basic f s t)
-  thus ?case using big_step_tr.Basic big_to_small_tr final_det_tr by blast
+  case Basic thus ?case using big_step_tr.Basic big_to_small_tr final_det_tr by blast
 next
-  case (Seq1 c1 s r c2 t)
-  thus ?case using BNone big_step_tr.Seq by blast
+  case Seq1 thus ?case using BNone big_step_tr.Seq by blast
 next 
-  case (Seq2 c0 s c2 r c1 t)
-  thus ?case using big_step_tr.Seq by blast
+  case Seq2 thus ?case using big_step_tr.Seq by blast
 next
-  case (IfTrue b s c1 c2 t)
-  thus ?case by (simp add: big_step_tr.IfTrue)
+  case IfTrue thus ?case by (simp add: big_step_tr.IfTrue)
 next
-  case (IfFalse b s c1 c2 t)
-  thus ?case by (simp add: big_step_tr.IfFalse)
+  case IfFalse thus ?case by (simp add: big_step_tr.IfFalse)
 next
-  case (WhileFalse b s I c t)
-  thus ?case using big_step_tr.WhileFalse big_to_small_tr final_det_tr by blast 
+  case WhileFalse thus ?case using big_step_tr.WhileFalse big_to_small_tr final_det_tr by blast 
 next
-  case (WhileTrue b s I c t)
-  thus ?case using big_step_tr.WhileTrue by blast 
+  case WhileTrue thus ?case using big_step_tr.WhileTrue by blast 
 next
-  case (Wait b s t)
-  thus ?case using big_step_tr.Wait big_to_small_tr final_det_tr by blast
+  case Wait thus ?case using big_step_tr.Wait big_to_small_tr final_det_tr by blast
 qed
 
 
@@ -543,25 +535,19 @@ subsection {* New big step implies traditional big step *}
 
 lemma big_implies_big_tr:"(Some C, s) \<Rightarrow> t \<Longrightarrow> (Some (strip C), s) \<Rightarrow>\<^sub>t\<^sub>r t"
 proof(induct "(Some C, s)" t arbitrary:C s rule:big_step.induct)
-  case (Basic P f s) 
-    thus ?case using big_step_tr.Basic by auto
+  case Basic thus ?case using big_step_tr.Basic by auto
 next
-  case (Seq c0 s t c1 r) thus ?case using big_step_tr.Seq by auto
+  case Seq thus ?case using big_step_tr.Seq by auto
 next
-  case (IfTrue b s c1 t P c2)
-    thus ?case by (simp add: big_step_tr.IfTrue)
+  case IfTrue thus ?case by (simp add: big_step_tr.IfTrue)
 next
-  case (IfFalse b s c2 t P c1)
-    thus ?case by (simp add: big_step_tr.IfFalse)
+  case IfFalse thus ?case by (simp add: big_step_tr.IfFalse)
 next
-  case (WhileFalse b s P I c)
-    thus ?case by (simp add: big_step_tr.WhileFalse)
+  case WhileFalse thus ?case by (simp add: big_step_tr.WhileFalse)
 next
-  case (WhileTrue b s P I c s1 t)
-    thus ?case using big_step_tr.WhileTrue by auto
+  case WhileTrue thus ?case using big_step_tr.WhileTrue by auto
 next
-  case (Wait b s P)
-    thus ?case by (simp add: big_step_tr.Wait) 
+  case Wait thus ?case by (simp add: big_step_tr.Wait) 
 qed
 
 end

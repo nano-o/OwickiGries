@@ -4,10 +4,10 @@ begin
 
 datatype par_com =
   Parallel   "((acom option \<times> assn) list)"|
-  ParBasic  "state \<Rightarrow> state"          |
+  ParBasic  "newstate \<Rightarrow> newstate"          |
   ParSeq     par_com par_com         ("_,, _") |
-  ParCond    bexp par_com par_com    ("IF _ THEN _ ELSE _ FI")|
-  ParWhile   bexp assn par_com       ("WHILE _ INV _ DO _ OD")
+  ParCond    "newstate \<Rightarrow> bool" par_com par_com    ("IF _ THEN _ ELSE _ FI")|
+  ParWhile   "newstate \<Rightarrow> bool" assn par_com       ("WHILE _ INV _ DO _ OD")
 
 definition Index :: "'a list \<Rightarrow> nat set" where
   "Index xs \<equiv> {i. i < length xs}"
@@ -40,7 +40,7 @@ definition All_None where
   "All_None Ts \<equiv> \<forall>i \<in> Index Ts. fst(Ts!i) = None"
 
 inductive
-  par_trans :: "par_com * state \<Rightarrow> par_com * state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>P" 55)
+  par_trans :: "par_com * newstate \<Rightarrow> par_com * newstate \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>P" 55)
 where
 Paral:  "\<lbrakk>i \<in> Index Cs; Cs!i = (Some c, Q); (Some c, s) \<rightarrow> (ro, t)\<rbrakk> \<Longrightarrow>
   (Parallel Cs, s) \<rightarrow>\<^sub>P (Parallel(Cs[i := (ro, Q)]), t)"|
@@ -50,14 +50,14 @@ PBasic:  "(ParBasic f, s) \<rightarrow>\<^sub>P (Parallel [], f s)" |
 PSeq1:   "All_None Ts \<Longrightarrow> ((Parallel Ts,, c), s) \<rightarrow>\<^sub>P (c, s)" |
 PSeq2:   "(c0, s) \<rightarrow>\<^sub>P (c2, t) \<Longrightarrow> ((c0,, c1), s) \<rightarrow>\<^sub>P ((c2,, c1), t)" |
 
-PIfTrue:  "bval b s \<Longrightarrow> ((IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>P (c1, s)" |
-PIfFalse: "\<not>bval b s \<Longrightarrow> ((IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>P (c2, s)" |
+PIfTrue:  "\<forall>s. b s \<Longrightarrow> ((IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>P (c1, s)" |
+PIfFalse: "\<forall>s. \<not>b s \<Longrightarrow> ((IF b THEN c1 ELSE c2 FI), s) \<rightarrow>\<^sub>P (c2, s)" |
 
-PWhileTrue: "\<not>bval b s \<Longrightarrow> ((WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>P (Parallel [], s)" |
-PWhileFalse:"bval b s \<Longrightarrow> ((WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>P ((c,, (WHILE b INV I DO c OD)), s)"
+PWhileTrue: "\<forall>s. \<not>b s \<Longrightarrow> ((WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>P (Parallel [], s)" |
+PWhileFalse:"\<forall>s. b s \<Longrightarrow> ((WHILE b INV I DO c OD), s) \<rightarrow>\<^sub>P ((c,, (WHILE b INV I DO c OD)), s)"
 
 abbreviation
-  par_transs :: "par_com * state \<Rightarrow> par_com * state \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>P*" 55)
+  par_transs :: "par_com * newstate \<Rightarrow> par_com * newstate \<Rightarrow> bool" (infix "\<rightarrow>\<^sub>P*" 55)
 where "x \<rightarrow>\<^sub>P* y == star par_trans x y"
 
 subsection{* Executability *}

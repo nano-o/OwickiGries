@@ -7,7 +7,7 @@ text{* Verification condition for the traditional definition: *}
 fun pre_tr :: "com \<Rightarrow> assn \<Rightarrow> assn" where
 "pre_tr (Basic f) Q = (\<lambda>s. Q (f s))" |
 "pre_tr (c1;; c2) Q = pre_tr c1 (pre_tr c2 Q)" |
-"pre_tr (IF b THEN c1 ELSE c2 FI) Q = (\<lambda>s. if bval b s then pre_tr c1 Q s else pre_tr c2 Q s)"|
+"pre_tr (IF b THEN c1 ELSE c2 FI) Q = (\<lambda>s. if b s then pre_tr c1 Q s else pre_tr c2 Q s)"|
 "pre_tr (WHILE b INV I DO C OD) Q = I"|
 "pre_tr (WAIT b END) Q = Q"
 
@@ -16,7 +16,7 @@ fun vc_tr :: "com \<Rightarrow> assn \<Rightarrow> bool" where
 "vc_tr (c1;; c2) Q = ((vc_tr c1 (pre_tr c2 Q)) \<and> (vc_tr c2 Q))" |
 "vc_tr (IF b THEN c1 ELSE c2 FI) Q = (vc_tr c1 Q \<and> vc_tr c2 Q)" |
 "vc_tr (WHILE b INV I DO c OD) Q =
-  ((\<forall>s. (I s \<and> bval b s \<longrightarrow> pre_tr c I s) \<and> (I s \<and> \<not> bval b s \<longrightarrow> Q s)) \<and> vc_tr c I)"|
+  ((\<forall>s. (I s \<and> b s \<longrightarrow> pre_tr c I s) \<and> (I s \<and> \<not> b s \<longrightarrow> Q s)) \<and> vc_tr c I)"|
 "vc_tr (WAIT b END) Q = True"
 
 text {* Soundness: *}
@@ -31,10 +31,10 @@ next
     thus ?case by (smt conseq hoare_tr.If pre_tr.simps(3) vc_tr.simps(3)) 
 next
   case (While b I C Q)
-  hence pre:"\<forall>s. (I s \<and> bval b s \<longrightarrow> pre_tr C I s)" and 
-  post:"\<forall>s. (I s \<and> \<not> bval b s \<longrightarrow> Q s)" and vc:"vc_tr C I" by simp_all
+  hence pre:"\<forall>s. (I s \<and> b s \<longrightarrow> pre_tr C I s)" and 
+  post:"\<forall>s. (I s \<and> \<not> b s \<longrightarrow> Q s)" and vc:"vc_tr C I" by simp_all
   hence "\<turnstile>\<^sub>t\<^sub>r {pre_tr C I} C {I}" using While.IH by blast
-  hence "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. I s \<and> bval b s} C {I}" using conseq pre by auto
+  hence "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. I s \<and> b s} C {I}" using conseq pre by auto
   thus ?case by (simp add: post) 
 next
   case (Wait b Q)  thus ?case by simp
@@ -94,10 +94,10 @@ text{* Verification condition: *}
 fun vc :: "acom \<Rightarrow> assn \<Rightarrow> bool" where
 "vc (ABasic P f) Q = (\<forall>s. P s \<longrightarrow> Q (f s))" |
 "vc (C1;; C2) Q = ((vc C1 (pre C2)) \<and> (vc C2 Q))" |
-"vc ({P} IF b THEN C1 ELSE C2 FI) Q = (vc C1 Q \<and> vc C2 Q \<and> (\<forall>s. P s \<and> bval b s \<longrightarrow> pre C1 s) \<and> (\<forall>s. P s \<and> \<not>bval b s \<longrightarrow> pre C2 s))" |
+"vc ({P} IF b THEN C1 ELSE C2 FI) Q = (vc C1 Q \<and> vc C2 Q \<and> (\<forall>s. P s \<and> b s \<longrightarrow> pre C1 s) \<and> (\<forall>s. P s \<and> \<not>b s \<longrightarrow> pre C2 s))" |
 "vc ({P} WHILE b INV I DO C OD) Q =
-  ((\<forall>s. (P s \<longrightarrow> I s) \<and> (I s \<and> bval b s \<longrightarrow> pre C s) \<and> (I s \<and> \<not> bval b s \<longrightarrow> Q s)) \<and> vc C I)"|
-"vc ({P} WAIT b END) Q = (\<forall>s. P s \<and> bval b s \<longrightarrow> Q s)"
+  ((\<forall>s. (P s \<longrightarrow> I s) \<and> (I s \<and> b s \<longrightarrow> pre C s) \<and> (I s \<and> \<not> b s \<longrightarrow> Q s)) \<and> vc C I)"|
+"vc ({P} WAIT b END) Q = (\<forall>s. P s \<and> b s \<longrightarrow> Q s)"
 
 text {* Soundness: *}
 
@@ -149,15 +149,15 @@ next
   case conseq thus ?case using vc_mono by auto 
 next
   case (If P b c1 Q c2)
-  from If.IH obtain C1 where ih1: "?G (\<lambda>s. P s \<and> bval b s) c1 Q C1" by blast
-  from If.IH obtain C2 where ih2: "?G (\<lambda>s. P s \<and> \<not>bval b s) c2 Q C2" by blast
+  from If.IH obtain C1 where ih1: "?G (\<lambda>s. P s \<and> b s) c1 Q C1" by blast
+  from If.IH obtain C2 where ih2: "?G (\<lambda>s. P s \<and> \<not>b s) c2 Q C2" by blast
   from ih1 ih2 obtain C where ih:"C = {P} IF b THEN C1 ELSE C2 FI" by simp
   hence "\<forall>s. P s \<longrightarrow> pre C s" by simp
   hence vc:"vc C Q" by (simp add: ih ih1 ih2)
   show ?case by (metis vc ih ih1 ih2 pre.simps(3) strip.simps(3)) 
 next
   case (While P I b c Q)
-  from While.IH obtain C where ih: "?G (\<lambda>s. I s \<and> bval b s) c I C" by blast
+  from While.IH obtain C where ih: "?G (\<lambda>s. I s \<and> b s) c I C" by blast
   from ih obtain CW where 1:"CW = {P} WHILE b INV I DO C OD" by simp
   hence 2:"\<forall>s. P s \<longrightarrow> pre CW s" by simp
   hence 3:"vc CW Q" by (simp add: 1 While.hyps(1) While.hyps(3) ih)

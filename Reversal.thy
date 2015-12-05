@@ -2,12 +2,13 @@ theory Reversal
 imports VCG
 begin
 
-datatype 'a Pointer = Nil|PAddress 'a
+abbreviation pre0::"assn" where "pre0 \<equiv> \<lambda>s. \<exists>\<alpha> \<beta>. (list s \<alpha> i) \<and> (list s \<beta> j) \<and> (rev \<alpha> = (append (rev \<alpha>) \<beta>))"
 
-datatype 'a Node = Nil|Node 'a "'a Pointer"
+abbreviation loopcom::"newstate \<Rightarrow> newstate" where 
+"loopcom \<equiv> \<lambda>s. s(k := s (i + 1), s (i + 1) := j, j := i, i := k)"
 
-datatype "'a Node" list = Nil|Cons "'a Node" "'a list"
+abbreviation revers::
 
-
+abbreviation 
 
 end
