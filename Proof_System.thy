@@ -15,7 +15,7 @@ hoare_valid_tr :: "assn \<Rightarrow> com \<Rightarrow> assn \<Rightarrow> bool"
 inductive
   hoare :: "acom \<Rightarrow> assn \<Rightarrow> bool" ("\<turnstile> ((_)/ {(1_)})" 50)
 where
-ABasic: "\<lbrakk>\<forall>s. P s \<longrightarrow> Q (f s)\<rbrakk> \<Longrightarrow> \<turnstile> (ABasic P f) {Q}"  |
+ABasic: "\<lbrakk>\<And> s . P s \<longrightarrow> Q (f s)\<rbrakk> \<Longrightarrow> \<turnstile> ({P} BASIC f) {Q}"  |
 
 Seq: "\<lbrakk> \<turnstile> c0 {pre(c1)}; \<turnstile> c1 {Q} \<rbrakk> \<Longrightarrow> \<turnstile> (c0;; c1) {Q}"  |
 
@@ -31,7 +31,16 @@ Wait: "\<lbrakk>\<And> s . P s \<and> b s \<Longrightarrow> Q s\<rbrakk> \<Longr
 
 Conseq:"\<lbrakk>\<turnstile> c {Q}; \<forall>s. Q s \<longrightarrow> Q' s\<rbrakk> \<Longrightarrow> \<turnstile> c {Q'}"
 
-inductive_cases BasicE:" \<turnstile> (ABasic P f) {Q}"
+
+(* lemma "\<turnstile> C {Q} \<Longrightarrow> True"
+proof(induct rule:hoare.induct)
+  fix P Q f
+  assume "\<And>s. P s \<longrightarrow> Q (f s)"
+  show True by auto
+next *) 
+
+
+inductive_cases ABasicE:" \<turnstile> (ABasic P f) {Q}"
 inductive_cases SeqE:" \<turnstile> (c0;; c1) {Q}"
 inductive_cases IfE:"\<turnstile> ({P} IF b THEN c1 ELSE c2 FI) {Q}"
 inductive_cases WhileE:" \<turnstile> ({P} WHILE b INV I DO c OD) {Q}"
@@ -162,10 +171,14 @@ next
   thus ?case by (metis While.hyps(1) While.hyps(4) hoare_valid_tr_def small_to_big_tr) 
 qed
 
-lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q}\<Longrightarrow> \<Turnstile> C {Q}"
+
+
+(* lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q}\<Longrightarrow> \<Turnstile> C {Q}"
 proof(induct arbitrary:C Q rule:hoare.induct)
   case (ABasic P Q f C Q')
-    thus ?case
+    fix P Q f C Qa
+    assume "\<And>s. P s \<longrightarrow> Q (f s)" and "\<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Qa}"
+    show " \<Turnstile> C {Qa}"
 next
   case (Seq c1 c2 Q C Q')
     thus ?case by (metis big_implies_big_tr big_to_small_tr hoare_valid_def hoare_valid_tr_def small_to_big) 
@@ -201,7 +214,7 @@ next
     qed
   }
   thus ?case by (simp add: While.hyps(4) While.prems)
-qed
+qed*)
 
 lemma valid_implies_valid_tr: "\<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q} \<Longrightarrow> \<Turnstile> C {Q}"
 by (metis big_implies_big_tr big_iff_small big_to_small_tr hoare_valid_def hoare_valid_tr_def)
@@ -220,7 +233,7 @@ lemma strong_sound_1:
   shows "case ro of Some r \<Rightarrow> pre(r) t \<and>  \<turnstile> r {Q}| None \<Rightarrow> Q t"
   using assms(3) assms(1,2)
 proof (induct c Q arbitrary: ro t s rule:hoare.induct)
-  case (Basic) thus ?case by auto
+  case (ABasic) thus ?case by auto
 next
   case (Seq) thus ?case by (smt hoare.Seq is_none_code(2) is_none_simps(1) option.case_eq_if option.sel pre.simps(2) small_step_cases(3))
 next

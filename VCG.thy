@@ -75,12 +75,12 @@ next
   case conseq thus ?case using vc_mono_tr pre_mono_tr by auto
 next
   case (If P b C1 Q C2)
-  hence ih1: "?G (\<lambda>s. P s \<and> bval b s) C1 Q" by blast
-  hence ih2: "?G (\<lambda>s. P s \<and> \<not>bval b s) C2 Q" by (simp add: If.IH(2)) 
+  hence ih1: "?G (\<lambda>s. P s \<and>  b s) C1 Q" by blast
+  hence ih2: "?G (\<lambda>s. P s \<and> \<not> b s) C2 Q" by (simp add: If.IH(2)) 
   show ?case by (simp add: ih1 ih2) 
 next
   case (While P I b C Q)
-  hence ih: "?G (\<lambda>s. I s \<and> bval b s) C I" by blast
+  hence ih: "?G (\<lambda>s. I s \<and>  b s) C I" by blast
   thus ?case by (simp add: While.hyps(1) While.hyps(3)) 
 next
   case (Wait P b Q)
@@ -170,7 +170,7 @@ fun pre_par :: "par_com \<Rightarrow> assn \<Rightarrow> assn" where
 "pre_par (Parallel Ts) Q = (\<lambda>s. \<forall>i \<in> Index Ts. (pre (the (com(Ts!i)))) s)" |
 "pre_par (ParBasic f) Q = (\<lambda>s. Q (f s))" |
 "pre_par (C1,, C2) Q = pre_par C1 (pre_par C2 Q)" |
-"pre_par (IF b THEN C1 ELSE C2 FI) Q = (\<lambda>s. if bval b s then pre_par C1 Q s else pre_par C2 Q s)"|
+"pre_par (IF b THEN C1 ELSE C2 FI) Q = (\<lambda>s. if b s then pre_par C1 Q s else pre_par C2 Q s)"|
 "pre_par (WHILE b INV I DO C OD) Q = I"
 
 fun vc_par :: "par_com \<Rightarrow> assn \<Rightarrow> bool" where
@@ -180,7 +180,7 @@ fun vc_par :: "par_com \<Rightarrow> assn \<Rightarrow> bool" where
 "vc_par (C1,, C2) Q = ((vc_par C1 (pre_par C2 Q)) \<and> (vc_par C2 Q))" |
 "vc_par (IF b THEN C1 ELSE C2 FI) Q = (vc_par C1 Q \<and> vc_par C2 Q)" |
 "vc_par (WHILE b INV I DO C OD) Q =
-  ((\<forall>s. (I s \<and> bval b s \<longrightarrow> pre_par C I s) \<and> (I s \<and> \<not> bval b s \<longrightarrow> Q s)) \<and> vc_par C I)"
+  ((\<forall>s. (I s \<and> b s \<longrightarrow> pre_par C I s) \<and> (I s \<and> \<not> b s \<longrightarrow> Q s)) \<and> vc_par C I)"
 
 text {* Soundness: *}
 
@@ -194,10 +194,10 @@ next
     thus ?case by (smt ParConseq hoare_par.ParCond pre_par.simps(4) vc_par.simps(4)) 
 next
   case (ParWhile b I C Q)
-  hence pre:"\<forall>s. (I s \<and> bval b s \<longrightarrow> pre_par C I s)" and 
-  post:"\<forall>s. (I s \<and> \<not> bval b s \<longrightarrow> Q s)" and vc:"vc_par C I" by simp_all
+  hence pre:"\<forall>s. (I s \<and> b s \<longrightarrow> pre_par C I s)" and 
+  post:"\<forall>s. (I s \<and> \<not> b s \<longrightarrow> Q s)" and vc:"vc_par C I" by simp_all
   hence "\<turnstile>\<^sub>P {pre_par C I} C {I}" using ParWhile.IH by blast
-  hence "\<turnstile>\<^sub>P {\<lambda>s. I s \<and> bval b s} C {I}" using ParConseq pre by auto
+  hence "\<turnstile>\<^sub>P {\<lambda>s. I s \<and>  b s} C {I}" using ParConseq pre by auto
   thus ?case by (simp add: post) 
 next
   case (Parallel Ts Q)
@@ -246,12 +246,12 @@ next
   case ParConseq thus ?case using vc_mono_par pre_mono by auto
 next
   case (ParCond P b C1 Q C2)
-  hence ih1: "?G (\<lambda>s. P s \<and> bval b s) C1 Q" by blast
-  hence ih2: "?G (\<lambda>s. P s \<and> \<not>bval b s) C2 Q" by (simp add: ParCond.IH(2)) 
+  hence ih1: "?G (\<lambda>s. P s \<and>  b s) C1 Q" by blast
+  hence ih2: "?G (\<lambda>s. P s \<and> \<not> b s) C2 Q" by (simp add: ParCond.IH(2)) 
   show ?case by (simp add: ih1 ih2) 
 next
   case (ParWhile P I b C Q)
-  hence ih: "?G (\<lambda>s. I s \<and> bval b s) C I" by blast
+  hence ih: "?G (\<lambda>s. I s \<and>  b s) C I" by blast
   thus ?case by (simp add: ParWhile.hyps(1) ParWhile.hyps(3)) 
 next
   case (Parallel Ts)

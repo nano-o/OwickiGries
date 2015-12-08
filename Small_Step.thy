@@ -7,7 +7,7 @@ subsection {* Step definitions *}
 inductive
   small_step :: "(acom option) * newstate \<Rightarrow> (acom option) * newstate \<Rightarrow> bool" (infix "\<rightarrow>" 55)
 where
-Basic:  "(Some(ABasic P f), s) \<rightarrow> (None, f s)" |
+ABasic:  "(Some(ABasic P f), s) \<rightarrow> (None, f s)" |
 
 Seq1:   "(Some(c0), s) \<rightarrow> (None, t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow> (Some(c1), t)" |
 Seq2:   "(Some(c0), s) \<rightarrow> (Some(c2), t) \<Longrightarrow> (Some (c0;; c1), s) \<rightarrow> (Some(c2;; c1), t)" |
@@ -102,7 +102,7 @@ declare small_step.intros[simp, intro]
 
 text{* Rule inversion: *}
 
-inductive_cases BasicE[elim!]: "(Some(ABasic P f), s) \<rightarrow> ct"
+inductive_cases ABasicE[elim!]: "(Some(ABasic P f), s) \<rightarrow> ct"
 inductive_cases SeqE[elim]: "(Some(c1;; c2), s) \<rightarrow> ct"
 inductive_cases IfE[elim!]: "(Some({P} IF b THEN c1 ELSE c2 FI), s) \<rightarrow> ct"
 inductive_cases WhileE[elim]: "(Some({P} WHILE b INV I DO c OD), s) \<rightarrow> ct"
@@ -335,7 +335,7 @@ qed
 lemma small_big_continue:
   "cs \<rightarrow> cs' \<Longrightarrow> cs' \<Rightarrow> t \<Longrightarrow> cs \<Rightarrow> t"
 proof (induction arbitrary: t rule: small_step.induct)
-  case (Basic P f s t)
+  case (ABasic P f s t)
   thus ?case using big_step.Basic big_to_small final_det by blast
 next
   case (Seq1 c1 s r c2 t)
