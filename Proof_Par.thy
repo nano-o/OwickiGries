@@ -168,18 +168,18 @@ qed
 
 lemma interfree_step_post:
   assumes "interfree(opt, Q, Some c)" and "(Some c, s) \<rightarrow> (ro, t)" and "case opt of (Some u) \<Rightarrow> pre u s| None \<Rightarrow> Q s" and "pre c s"
-  shows "case opt of (Some u) \<Rightarrow> pre u t| None \<Rightarrow> Q t" sorry
-(* proof(cases opt)
+  shows "case opt of (Some u) \<Rightarrow> pre u t| None \<Rightarrow> Q t"
+ proof(cases opt)
   case None
     have 1:"Q s" using None assms(3) by simp
     from assms(1) None have 2:"\<forall>(R, r) \<in> (atomics c). \<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> R s} r {Q}" by force
     show ?thesis using assms(2) assms(1,3,4)
     proof (induction "Some c" s ro t arbitrary: c rule:small_step_induct)
-      case (Basic P f s) term ?case
+      case (ABasic P f s)
       hence 3:"{(P, Basic f)} = atomics (ABasic P f)" by simp
-      with Basic.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} (Basic f) {Q}"
+      with ABasic.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} (Basic f) {Q}"
       by (metis (no_types, lifting) None hoare_valid_tr_def interfree.simps(2) singletonI splitD)
-      have 5:"Q s \<and> P s" using None Basic.prems(2,3) by auto
+      have 5:"Q s \<and> P s" using None ABasic.prems(2,3) by auto
       show ?case using 4 5 None hoare_valid_tr_def by auto
     qed (auto simp add:None) 
   next
@@ -189,17 +189,16 @@ lemma interfree_step_post:
        (\<forall>P \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. P s \<and> R s} r {P}))" using Some assms(1) by auto
      show ?thesis using assms(2) assms(1,3,4)
     proof (induction "Some c" s ro t arbitrary: c rule:small_step_induct)
-    case (Basic P f s)
+    case (ABasic P f s)
       hence 3:"{(P, Basic f)} = atomics (ABasic P f)" by simp
-      with Basic.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} (Basic f) {Q} \<and> 
+      with ABasic.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} (Basic f) {Q} \<and> 
         (\<forall>R \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. R s \<and> P s} (Basic f) {R})" 
         by (metis (mono_tags, lifting) Some hoare_valid_tr_def interfree.simps(3) singletonI splitD)
-      have 5:"pre u s \<and> P s" using Some Basic.prems(2,3) by auto
+      have 5:"pre u s \<and> P s" using Some ABasic.prems(2,3) by auto
       have 6:"pre u \<in> (assertions u)" by (simp add: assertions_inclusion) 
       show ?case by (smt 4 5 6 Some hoare_valid_tr_def option.simps(5) small_step_tr.Basic star_step1)
     qed (auto simp add:Some)
-qed *)
-
+qed
 
 lemma INTERFREE_Step: assumes "(Parallel Ts, s) \<rightarrow>\<^sub>P (Parallel Rs, t)" and "INTERFREE Ts" shows "INTERFREE Rs"
 proof -
