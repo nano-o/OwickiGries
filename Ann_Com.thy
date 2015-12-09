@@ -3,7 +3,9 @@ imports BExp
 begin
 
 type_synonym address = int
-type_synonym newstate = "address \<Rightarrow> int"
+type_synonym memory = "address \<Rightarrow> int"
+datatype newstate = 
+  State (mem: "address \<Rightarrow> int") (vars: "string \<Rightarrow> int")
 
 type_synonym assn = "newstate \<Rightarrow> bool"
 
@@ -16,7 +18,7 @@ datatype com =
 
 fun list :: "newstate \<Rightarrow> (int list) \<Rightarrow> int \<Rightarrow> bool" where 
 "list s [] i = (i = (0::int))"|
-"list s (x#xs) i = (\<exists>j. (s i = j) \<and> (s (i+1) = x) \<and> list s xs j)"
+"list s (x#xs) i = (\<exists>j. ((mem s) i = j) \<and> ((mem s) (i+1) = x) \<and> list s xs j)"
 
 (* s where "s \<equiv> \<lambda> i . if i = 1 then 3 else (if i = 2 then 42 else (if i = 3 then 0 else 43))"
 
@@ -24,7 +26,7 @@ lemma "list s [42, 43] 1" by force
 *)
 fun reach_step::"newstate \<Rightarrow> nat \<Rightarrow> int \<Rightarrow> int \<Rightarrow> bool" where
 "reach_step s 0 i j = (i = j)"|
-"reach_step s (Suc n) i j = (\<exists>a k. (s i = a) \<and> (s (i + 1) = k) \<and> (reach_step s n k j))"
+"reach_step s (Suc n) i j = (\<exists>a k. ((mem s) i = a) \<and> ((mem s) (i + 1) = k) \<and> (reach_step s n k j))"
 
 definition reach::"newstate \<Rightarrow> int \<Rightarrow> int \<Rightarrow> bool" where
   "reach s i j \<equiv> (\<exists>n \<ge> 0. reach_step s n i j)"
