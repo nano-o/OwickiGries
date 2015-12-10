@@ -2,29 +2,29 @@ theory Ann_Com
 imports BExp
 begin
 
-type_synonym address = int
-type_synonym memory = "address \<Rightarrow> int"
+type_synonym address = nat
+type_synonym memory = "address \<Rightarrow> nat"
 datatype newstate = 
-  State (mem: "address \<Rightarrow> int") (vars: "string \<Rightarrow> address")
+  State (mem: "address \<Rightarrow> nat") (vars: "string \<Rightarrow> address")
 
 type_synonym assn = "newstate \<Rightarrow> bool"
 
 datatype com =
   Basic "newstate \<Rightarrow> newstate"   ("BASIC _ ")   |
-  Seq   com com          ("_;; _") |
+  Seq   com com          ("_;; _" [61, 60] 1000) |
   Cond "newstate \<Rightarrow> bool" com com      ("IF _ THEN _ ELSE _ FI")|
   While "newstate \<Rightarrow> bool" assn com    ("WHILE _ INV _ DO _ OD")|
   Wait "newstate \<Rightarrow> bool"              ("WAIT _ END")
 
-fun list :: "newstate \<Rightarrow> (int list) \<Rightarrow> int \<Rightarrow> bool" where 
-"list s [] i = (i = (0::int))"|
+fun list :: "newstate \<Rightarrow> (nat list) \<Rightarrow> nat \<Rightarrow> bool" where 
+"list s [] i = (i = (0::nat))"|
 "list s (x#xs) i = (\<exists>j. ((mem s) i = x) \<and> ((mem s) (i + 1) = j) \<and> list s xs j)"
 
-fun reach_step::"newstate \<Rightarrow> nat \<Rightarrow> int \<Rightarrow> int \<Rightarrow> bool" where
+fun reach_step::"newstate \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
 "reach_step s 0 i j = (i = j)"|
-"reach_step s (Suc n) i j = (\<exists>a k. ((mem s) i = a) \<and> ((mem s) (i + 1) = k) \<and> (reach_step s n k j))"
+"reach_step s (Suc n) i j = (\<exists> k. ((mem s) (i + 1) = k) \<and> (reach_step s n k j))"
 
-definition reach::"newstate \<Rightarrow> int \<Rightarrow> int \<Rightarrow> bool" where
+definition reach::"newstate \<Rightarrow> address \<Rightarrow> nat \<Rightarrow> bool" where
   "reach s i j \<equiv> (\<exists>n \<ge> 0. reach_step s n i j)"
 
 datatype acom =
