@@ -16,11 +16,11 @@ abbreviation init where
 abbreviation all where
 "all \<equiv> BASIC (\<lambda>s. State ((mem s)((mem s) ((vars s) i + 1) := (vars s) j)) ((vars s)(k := (mem s) ((vars s) i + 1), j := (vars s) i, i := (mem s)(((vars s) i) + 1))))"
 
-abbreviation assgin1 where
-"assgin1 \<equiv> BASIC (\<lambda>s. State (mem s) ((vars s)(k := (mem s) ((vars s) i + 1))))"
+abbreviation assign1 where
+"assign1 \<equiv> BASIC (\<lambda>s. State (mem s) ((vars s)(k := (mem s) ((vars s) i + 1))))"
 
-abbreviation assgin2 where
-"assgin2 \<equiv> BASIC (\<lambda>s. State ((mem s)((mem s) ((vars s) i + 1) := (vars s) j)) (vars s))"
+abbreviation assign2 where
+"assign2 \<equiv> BASIC (\<lambda>s. State ((mem s)((mem s) ((vars s) i + 1) := (vars s) j)) (vars s))"
 
 abbreviation assign3 where
 "assign3 \<equiv> BASIC (\<lambda>s. State (mem s) ((vars s)(j := (vars s) i)))"
@@ -38,7 +38,7 @@ abbreviation post::"assn" where "post \<equiv> \<lambda>s. \<exists>\<alpha> \<b
   (\<forall>k::string. (reach s 0 ((vars s) k)) \<and> (reach s ((vars s) j) ((vars s) k)) \<longrightarrow> ((vars s) k = 0))"
 
 abbreviation loopcom::com where 
-"loopcom \<equiv> init;; WHILE (\<lambda>s. (vars s) i \<noteq> 0) INV inv DO ((assgin1;; assgin2);; assign3);; assign4 OD"
+"loopcom \<equiv> init;; WHILE (\<lambda>s. (vars s) i \<noteq> 0) INV inv DO ((assign1;; assign2);; assign3);; assign4 OD"
 
 lemma l2:
   fixes s s' l v
@@ -75,8 +75,6 @@ lemma l7:
   assumes "list s \<alpha> a1" and "(mem s) a2 = v" and "(mem s) (a2 + 1) = a1"
   shows "list s (v#\<alpha>) a2" using assms
 by (induct \<alpha>) simp_all
-
-thm list.induct
 
 lemma l8:
   assumes "list s \<alpha> addr" and "\<alpha> \<noteq> []"

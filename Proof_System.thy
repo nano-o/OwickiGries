@@ -171,8 +171,6 @@ next
   thus ?case by (metis While.hyps(1) While.hyps(4) hoare_valid_tr_def small_to_big_tr) 
 qed
 
-
-
 (* lemma hoare_sound: "\<turnstile> C {Q} \<Longrightarrow> \<Turnstile>\<^sub>t\<^sub>r {pre C} strip C {Q}\<Longrightarrow> \<Turnstile> C {Q}"
 proof(induct arbitrary:C Q rule:hoare.induct)
   case (ABasic P Q f C Q')

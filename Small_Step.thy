@@ -126,7 +126,7 @@ inductive_cases BWaitE[elim]: "(Some {P} WAIT b END, s) \<Rightarrow> t"
 
 inductive_cases BTNoneE[elim!]: "(None, s) \<Rightarrow>\<^sub>t\<^sub>r t"
 inductive_cases BTBasicE[elim!]: "(Some (Basic f), s) \<Rightarrow>\<^sub>t\<^sub>r t"
-inductive_cases BTSeqE[elim!]: "(Some c1;;c2, s1) \<Rightarrow>\<^sub>t\<^sub>r t"
+inductive_cases BTSeqE[elim!]: "(Some (c1;;c2), s1) \<Rightarrow>\<^sub>t\<^sub>r t"
 inductive_cases BTIfE[elim!]: "(Some IF b THEN c1 ELSE c2 FI, s) \<Rightarrow>\<^sub>t\<^sub>r t"
 inductive_cases BTWhileE[elim]: "(Some WHILE b INV I DO c OD, s) \<Rightarrow>\<^sub>t\<^sub>r t"
 inductive_cases BTWaitE[elim]: "(Some WAIT b END, s) \<Rightarrow>\<^sub>t\<^sub>r t"
@@ -410,7 +410,7 @@ proof(induction "(Some c1)" s "(Some c1')" "s'" arbitrary:c1 rule: star_induct[w
 next
   case (step s con s' t)
   from none_final_tr step.hyps(1,2) obtain c where 1:"con = Some c" by fastforce
-  with step.hyps(3) have 2:"(Some c;; c2, s') \<rightarrow>\<^sub>t\<^sub>r* (Some c1';; c2, t)" by blast
+  with step.hyps(3) have 2:"(Some c;; c2, s') \<rightarrow>\<^sub>t\<^sub>r* (Some (c1';; c2), t)" by blast
   from 1 2 step.hyps(1) show ?case by (meson small_step_tr.Seq2 star.simps)
 qed
 

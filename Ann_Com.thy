@@ -5,7 +5,7 @@ begin
 type_synonym address = nat
 type_synonym memory = "address \<Rightarrow> nat"
 datatype newstate = 
-  State (mem: "address \<Rightarrow> nat") (vars: "string \<Rightarrow> address")
+  State (mem: memory) (vars: state)
 
 type_synonym assn = "newstate \<Rightarrow> bool"
 
