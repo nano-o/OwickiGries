@@ -3,11 +3,11 @@ imports Main
 begin
 
 type_synonym vname = string
-type_synonym val = int
+type_synonym val = nat
 type_synonym state = "vname \<Rightarrow> val"
 
 text_raw{*\snip{AExpaexpdef}{2}{1}{% *}
-datatype aexp = N int | V vname | Plus aexp aexp
+datatype aexp = N val | V vname | Plus aexp aexp
 text_raw{*}%endsnip*}
 
 text_raw{*\snip{AExpavaldef}{1}{2}{% *}

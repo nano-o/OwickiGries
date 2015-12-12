@@ -1,4 +1,4 @@
-theory Seperation
++theory Seperation
 imports VCG
 begin
 
@@ -6,7 +6,7 @@ type_synonym active_addrs = "nat \<Rightarrow> bool"
 
 type_synonym sepassn = "active_addrs \<Rightarrow> memory \<Rightarrow> bool"
 
-definition dom::"active_addrs \<Rightarrow> nat set" where "dom bs \<equiv> { addr . bs addr}"
+definition dom::"active_addrs \<Rightarrow> nat set" where "dom bs \<equiv> {addr. bs addr}"
 
 datatype sep =
   Points_to "address" "nat" ("_ \<mapsto> _") |
@@ -16,11 +16,8 @@ definition join :: "active_addrs \<Rightarrow> active_addrs \<Rightarrow> active
   "join bs\<^sub>1 bs\<^sub>2 \<equiv> \<lambda> addr . bs\<^sub>1 addr \<or> bs\<^sub>2 addr"
 
 fun eval_sep :: "sep \<Rightarrow> sepassn" where 
-  "eval_sep (Points_to a v) = (\<lambda> bs m . m a = v \<and> bs a)" 
-| "eval_sep (Conj P\<^sub>1 P\<^sub>2) = (\<lambda>bs s. \<exists>bs\<^sub>1 bs\<^sub>2. 
-    dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {} 
-    \<and> eval_sep P\<^sub>1 bs\<^sub>1 s \<and> eval_sep P\<^sub>2 bs\<^sub>2 s
-    \<and> bs = join bs\<^sub>1 bs\<^sub>2)"
+  "eval_sep (Points_to a v) = (\<lambda> bs m . m a = v \<and> bs a)" | 
+  "eval_sep (Conj P\<^sub>1 P\<^sub>2) = (\<lambda>bs s. \<exists>bs\<^sub>1 bs\<^sub>2. dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {} \<and> eval_sep P\<^sub>1 bs\<^sub>1 s \<and> eval_sep P\<^sub>2 bs\<^sub>2 s \<and> bs = join bs\<^sub>1 bs\<^sub>2)"
 
 definition mem_eq :: "memory \<Rightarrow> active_addrs \<Rightarrow> (memory set)" where
   "mem_eq m bits \<equiv> { m' . \<forall> addr \<in> dom bits . m' addr = m addr}"
@@ -31,7 +28,7 @@ definition is_true :: "assn \<Rightarrow> newstate \<Rightarrow> active_addrs \<
 *)
 
 definition to_assn where
-  "to_assn sep \<equiv> \<lambda> s . \<exists> bs . eval_sep sep bs (mem s)"
+  "to_assn sep \<equiv> \<lambda>s. \<exists>bs. eval_sep sep bs (mem s)"
 
 lemma l1:
   assumes "eval_sep P bs m" and  "m' \<in> mem_eq m bs" 
@@ -51,9 +48,7 @@ next
   show ?case using 5 6 1 4 apply(simp add:join_def) by blast
 qed
 
-term "\<turnstile>\<^sub>t\<^sub>r { to_assn (addr1 \<mapsto> 1)} c {Q}"
-
-lemma "\<turnstile>\<^sub>t\<^sub>r { \<lambda> s . True } BASIC (\<lambda> s . State ((mem s)(addr := v)) (vars s)) { to_assn (addr \<mapsto> v) }"
+lemma l2:"\<turnstile>\<^sub>t\<^sub>r { \<lambda> s . True } BASIC (\<lambda> s . State ((mem s)(addr := v)) (vars s)) { to_assn (addr \<mapsto> v) }"
 apply (rule Basic)
 apply(auto simp add:to_assn_def)
 done
@@ -61,6 +56,28 @@ done
 definition condition :: "sep \<Rightarrow> com \<Rightarrow> bool"
   where "condition r c \<equiv> \<forall> bs s s' . eval_sep r bs (mem s) \<and> (Some c,s) \<Rightarrow>\<^sub>t\<^sub>r s' 
     \<longrightarrow> (mem s' \<in> mem_eq (mem s) bs)"
+
+definition bits_minus where "bits_minus bs\<^sub>1 bs\<^sub>2 \<equiv> \<lambda>a . bs\<^sub>1 a \<and> \<not>bs\<^sub>2 a"
+
+lemma l3:
+  assumes 1:"bs' = bits_minus bs1 bs2"
+  shows "dom bs' \<inter> dom bs2 = {}"
+proof-
+  have "dom bs' = {addr. (\<lambda>a . bs1 a \<and> \<not>bs2 a) addr}" using 1 unfolding dom_def bits_minus_def by (metis Collect_cong) 
+  thus "dom bs' \<inter> dom bs2 = {}" by (metis CollectD Seperation.dom_def disjoint_iff_not_equal)
+qed
+
+lemma l4:
+  assumes "eval_sep P bs\<^sub>1 (mem s)" and "eval_sep R bs\<^sub>2 (mem s)"
+  and "(Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t" and "eval_sep Q bs\<^sub>3 (mem t)" 
+  and "eval_sep R bs\<^sub>2 (mem t)" and "dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {}"
+  and "condition R c"
+  obtains bs\<^sub>4 where "dom bs\<^sub>4 \<inter> dom bs\<^sub>2 = {}" and "eval_sep Q bs\<^sub>4 (mem t)"
+using assms
+proof-
+  obtain bs' where 1:"bs' = bits_minus bs\<^sub>3 bs\<^sub>2" by simp
+  hence "dom bs' \<inter> dom bs\<^sub>2 = {}" using l3 by simp
+  have "eval_sep Q bs' (mem t)"
 
 lemma 
   assumes main:"\<Turnstile>\<^sub>t\<^sub>r {to_assn P} c {to_assn Q}" and  cond:"condition R c" 
@@ -70,15 +87,22 @@ proof -(*
   by (metis (mono_tags, lifting) hoare_valid_tr_def) 
   with this obtain bs\<^sub>2 where "\<Turnstile>\<^sub>t\<^sub>r {\<lambda> s. eval_sep P bs\<^sub>1 (mem s)} c {\<lambda> s . eval_sep Q bs\<^sub>2 (mem s)}" sorry
   thm hoare_valid_tr_def *)
-  { fix s t 
-    assume 1:"to_assn (P * R) s" and 2:"(Some c,s) \<Rightarrow>\<^sub>t\<^sub>r t"
+  { 
+    fix s t 
+    assume 1:"to_assn (P * R) s" and 2:"(Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t"
     from 2 have 3:"\<And> bs . eval_sep R bs (mem s) \<Longrightarrow> mem t \<in> mem_eq (mem s) bs" using cond 
       unfolding condition_def by fast
-    obtain bs\<^sub>1 bs\<^sub>2 bs where "bs = join bs\<^sub>1 bs\<^sub>2" and "dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {}" and "eval_sep P bs\<^sub>1 (mem s)"
-      and "eval_sep R bs\<^sub>2 (mem s)" using 1 apply(auto simp add:to_assn_def join_def dom_def) done
+    obtain bs\<^sub>1 bs\<^sub>2 bs where 5:"bs = join bs\<^sub>1 bs\<^sub>2" and 6:"dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {}" and 7:"eval_sep P bs\<^sub>1 (mem s)"
+      and 8:"eval_sep R bs\<^sub>2 (mem s)" using 1 apply(auto simp add:to_assn_def join_def dom_def) done
     with 3 l1 have 4:"eval_sep R bs\<^sub>2 (mem t)" by fast
-    obtain bs\<^sub>3 bs' where "eval_sep Q bs\<^sub>3 (mem t)" and "bs' = join bs\<^sub>3 bs\<^sub>2" and "dom bs\<^sub>3 \<inter> dom bs\<^sub>2 = {}" sorry
-    with 4 have "to_assn (Q * R) t" by (auto simp add:to_assn_def) }
+    have 11:"mem t \<in> mem_eq (mem s) bs\<^sub>2" by (simp add: 3 8)
+    obtain bs\<^sub>3 where 9:"eval_sep P bs\<^sub>1 (mem s)  \<longrightarrow> eval_sep Q bs\<^sub>3 (mem t)"
+      by (metis 2 big_to_small_tr hoare_valid_tr_def main to_assn_def)
+    have "eval_sep Q bs\<^sub>3 (mem t)" by (simp add: 7 9)
+    obtain bs\<^sub>4 where 12:"dom bs\<^sub>4 \<inter> dom bs\<^sub>2 = {}" and 14:"eval_sep Q bs\<^sub>4 (mem t)" using l4 7 8 9 2 4 6 cond by blast
+    obtain bs' where "bs' = join bs\<^sub>4 bs\<^sub>2" by simp
+    with 4 14 12 have "to_assn (Q * R) t" using to_assn_def by auto 
+  }
   thus ?thesis by (metis hoare_valid_tr_def small_to_big_tr) 
 
 end

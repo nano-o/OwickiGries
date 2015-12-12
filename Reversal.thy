@@ -14,7 +14,7 @@ abbreviation init where
 "init \<equiv> BASIC (\<lambda>s. State (mem s) ((vars s)(j := 0)))"
 
 abbreviation all where
-"all \<equiv> BASIC (\<lambda>s. State ((mem s)((mem s) ((vars s) i + 1) := (vars s) j)) ((vars s)(k := (mem s) ((vars s) i + 1), j := (vars s) i, i := (mem s)(((vars s) i) + 1))))"
+"all \<equiv> BASIC (\<lambda>s. State ((mem s)((mem s) (((vars s) i) + 1) := (vars s) j)) ((vars s)(k := (mem s) ((vars s) i + 1), j := (vars s) i, i := (mem s)(((vars s) i) + 1))))"
 
 abbreviation assign1 where
 "assign1 \<equiv> BASIC (\<lambda>s. State (mem s) ((vars s)(k := (mem s) ((vars s) i + 1))))"
@@ -29,7 +29,7 @@ abbreviation assign4 where
 "assign4 \<equiv> BASIC (\<lambda>s. State (mem s) ((vars s)(i := (vars s) k)))"
 
 abbreviation pre0::"assn" where "pre0 \<equiv> \<lambda>s. \<exists>\<alpha> \<beta>. ((vars s) i \<noteq> 0) \<and> ((vars s) j = 0) \<and> (list s  \<alpha>\<^sub>0 ((vars s) i)) \<and>  (list s \<alpha> ((vars s) i)) \<and> 
-  (list s \<beta> ((vars s) j)) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>)) \<and> (\<forall>k::string. (reach s ((vars s) i) ((vars s) k)) \<and> (reach s ((vars s) j) ((vars s) k)) \<longrightarrow> ((vars s) k = 0))"
+  (list s \<beta> 0) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>)) \<and> (\<forall>k::string. (reach s ((vars s) i) ((vars s) k)) \<and> (reach s ((vars s) j) ((vars s) k)) \<longrightarrow> ((vars s) k = 0))"
 
 definition inv::"assn" where "inv \<equiv> \<lambda>s. \<exists>\<alpha> \<beta>. (list s \<alpha> ((vars s) i)) \<and> (list s \<beta> ((vars s) j)) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>))
   \<and> (\<forall> v . (reach s ((vars s) i) v) \<and> (reach s ((vars s) j) v) \<longrightarrow> v = 0)"
@@ -38,7 +38,7 @@ abbreviation post::"assn" where "post \<equiv> \<lambda>s. \<exists>\<alpha> \<b
   (\<forall>k::string. (reach s 0 ((vars s) k)) \<and> (reach s ((vars s) j) ((vars s) k)) \<longrightarrow> ((vars s) k = 0))"
 
 abbreviation loopcom::com where 
-"loopcom \<equiv> init;; WHILE (\<lambda>s. (vars s) i \<noteq> 0) INV inv DO ((assign1;; assign2);; assign3);; assign4 OD"
+"loopcom \<equiv> init;; WHILE (\<lambda>s. (vars s) i \<noteq> 0) INV inv DO all OD"
 
 lemma l2:
   fixes s s' l v
@@ -76,16 +76,16 @@ lemma l7:
   shows "list s (v#\<alpha>) a2" using assms
 by (induct \<alpha>) simp_all
 
-lemma l8:
+(*lemma l8:
   assumes "list s \<alpha> addr" and "\<alpha> \<noteq> []"
   shows "(mem s) (addr + 1) \<noteq> addr" using assms
   proof (induct \<alpha>)
     print_cases
-    case (Cons x xs) thus ?case 
+    case (Cons x xs) thus ?case nitpick
     apply (induct xs) 
-  
+  *)
 
-lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> inv s \<and> list s \<alpha> ((vars s) i) \<and> list s \<beta> ((vars s) j)} BASIC (\<lambda> s . State (mem s) ((vars s)(k := ((mem s) (((vars s) i) + 1))))) 
+(*lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> inv s \<and> list s \<alpha> ((vars s) i) \<and> list s \<beta> ((vars s) j)} BASIC (\<lambda> s . State (mem s) ((vars s)(k := ((mem s) (((vars s) i) + 1))))) 
   {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> inv s \<and> list s (tl \<alpha>) ((vars s) k) \<and> list s \<alpha> ((vars s) i) \<and> list s \<beta> ((vars s) j) \<and> ((vars s) k) \<noteq> ((vars s) i) + 1}" 
 apply (rule Basic)
 by (smt Ann_Com.list.simps(2) a1 a3 fun_upd_apply l2 l6 list.collapse newstate.sel(1) newstate.sel(2)) 
@@ -100,11 +100,10 @@ lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda> s . \<alpha> \<noteq> [] \<and> (
   {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> list s (tl \<alpha>) ((vars s) k) \<and> list s \<beta> ((vars s) j) \<and> list s ((hd \<alpha>)#\<beta>) ((vars s) i)}"
 apply (rule Basic) 
 
-lemma "inv s \<Longrightarrow> pre_tr all local.inv s" 
+lemma "inv s \<Longrightarrow> pre_tr all local.inv s" *)
 
 
-(*
-lemma "\<turnstile>\<^sub>t\<^sub>r {pre0} loopcom {post}"
+(*lemma "\<turnstile>\<^sub>t\<^sub>r {pre0} loopcom {post}"
 apply(rule Seq[where Q=inv])
 apply(rule Basic)
 apply (metis fun_upd_triv newstate.collapse)
