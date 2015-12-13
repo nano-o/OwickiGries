@@ -1,4 +1,4 @@
-+theory Seperation
+theory Seperation
 imports VCG
 begin
 
@@ -16,7 +16,7 @@ definition join :: "active_addrs \<Rightarrow> active_addrs \<Rightarrow> active
   "join bs\<^sub>1 bs\<^sub>2 \<equiv> \<lambda> addr . bs\<^sub>1 addr \<or> bs\<^sub>2 addr"
 
 fun eval_sep :: "sep \<Rightarrow> sepassn" where 
-  "eval_sep (Points_to a v) = (\<lambda> bs m . m a = v \<and> bs a)" | 
+  "eval_sep (Points_to a v) = (\<lambda> bs m . m a = v \<and> bs a \<and> (\<forall> a' . a' \<noteq> a \<longrightarrow> \<not> bs a'))" | 
   "eval_sep (Conj P\<^sub>1 P\<^sub>2) = (\<lambda>bs s. \<exists>bs\<^sub>1 bs\<^sub>2. dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {} \<and> eval_sep P\<^sub>1 bs\<^sub>1 s \<and> eval_sep P\<^sub>2 bs\<^sub>2 s \<and> bs = join bs\<^sub>1 bs\<^sub>2)"
 
 definition mem_eq :: "memory \<Rightarrow> active_addrs \<Rightarrow> (memory set)" where
@@ -35,7 +35,7 @@ lemma l1:
   shows "eval_sep P bs m'" using assms
 proof (induct arbitrary:bs rule:eval_sep.induct) 
   case 1 thus ?case
-    by (metis (mono_tags, lifting) Seperation.dom_def eval_sep.simps(1) mem_Collect_eq mem_eq_def) 
+  using Seperation.dom_def mem_eq_def by auto
 next
   case (2 P1 P2)
   from "2.prems"(1) obtain bs\<^sub>1 bs\<^sub>2 where 
@@ -48,10 +48,17 @@ next
   show ?case using 5 6 1 4 apply(simp add:join_def) by blast
 qed
 
-lemma l2:"\<turnstile>\<^sub>t\<^sub>r { \<lambda> s . True } BASIC (\<lambda> s . State ((mem s)(addr := v)) (vars s)) { to_assn (addr \<mapsto> v) }"
+declare [[unify_search_bound=50]]
+
+lemma l2:"\<turnstile>\<^sub>t\<^sub>r { \<lambda> s .True } BASIC (\<lambda> s . State ((mem s)(addr := v)) (vars s)) { to_assn (addr \<mapsto> v) }"
+apply (rule Basic)
+apply(simp add:to_assn_def)
+by fastforce
+
+lemma "\<turnstile>\<^sub>t\<^sub>r { \<lambda> s . \<exists> v' . to_assn (addr \<mapsto> v') s } BASIC (\<lambda> s . State ((mem s)(addr := v)) (vars s)) { to_assn (addr \<mapsto> v) }"
 apply (rule Basic)
 apply(auto simp add:to_assn_def)
-done
+done 
 
 definition condition :: "sep \<Rightarrow> com \<Rightarrow> bool"
   where "condition r c \<equiv> \<forall> bs s s' . eval_sep r bs (mem s) \<and> (Some c,s) \<Rightarrow>\<^sub>t\<^sub>r s' 
@@ -68,18 +75,55 @@ proof-
 qed
 
 lemma l4:
-  assumes "eval_sep P bs\<^sub>1 (mem s)" and "eval_sep R bs\<^sub>2 (mem s)"
-  and "(Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t" and "eval_sep Q bs\<^sub>3 (mem t)" 
-  and "eval_sep R bs\<^sub>2 (mem t)" and "dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {}"
-  and "condition R c"
-  obtains bs\<^sub>4 where "dom bs\<^sub>4 \<inter> dom bs\<^sub>2 = {}" and "eval_sep Q bs\<^sub>4 (mem t)"
-using assms
-proof-
-  obtain bs' where 1:"bs' = bits_minus bs\<^sub>3 bs\<^sub>2" by simp
-  hence "dom bs' \<inter> dom bs\<^sub>2 = {}" using l3 by simp
-  have "eval_sep Q bs' (mem t)"
+  fixes x R s t c bs\<^sub>1
+  assumes "condition R c"
+  shows "\<And> s t bs\<^sub>1 . \<lbrakk>eval_sep R bs\<^sub>1 (mem s); (Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t; bs\<^sub>1 x\<rbrakk> \<Longrightarrow> (mem s) x = (mem t) x" 
+using assms unfolding condition_def mem_eq_def dom_def by (simp)
 
-lemma 
+lemma l4':
+  fixes x R s t c bs\<^sub>1 bs\<^sub>2 bs\<^sub>3
+  assumes "eval_sep P bs\<^sub>1 (mem s)" and "eval_sep R bs\<^sub>2 (mem s)"and "(Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t" and 
+  "\<turnstile>\<^sub>t\<^sub>r {to_assn P} c {to_assn Q}" and "eval_sep Q bs\<^sub>3 (mem s)"and "dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {}"
+  shows "dom bs\<^sub>3 \<inter> dom bs\<^sub>2 = {}"
+using assms
+proof(induct c arbitrary:P Q)
+  case (Cond b c1 c2) thus ?case
+
+lemma l5:
+  fixes x v Q P R  c
+  defines "Q \<equiv> x \<mapsto> v"
+  assumes "condition R c"
+  and 
+    "\<And> s t bs\<^sub>1 bs\<^sub>2 . \<lbrakk>eval_sep P bs\<^sub>1 (mem s); (Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t\<rbrakk> \<Longrightarrow> 
+      \<exists> bs\<^sub>3 . eval_sep Q bs\<^sub>3 (mem t)"
+  and "eval_sep R bs\<^sub>2 (mem s)" and "eval_sep P bs\<^sub>1 (mem s)"
+  and "dom bs\<^sub>1 \<inter> dom bs\<^sub>2 = {}" and "(Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t"
+  obtains bs\<^sub>3 and bs\<^sub>4 where
+  "eval_sep Q bs\<^sub>3 (mem t)" and "eval_sep R bs\<^sub>4 (mem t)" and "dom bs\<^sub>3 \<inter> dom bs\<^sub>4 = {}"
+proof - 
+  let ?bs\<^sub>4 = "bs\<^sub>2"
+  have 1:"eval_sep R ?bs\<^sub>4 (mem t)" using assms(2,4,7) l1 unfolding condition_def by auto
+  obtain bs\<^sub>3' where 2:"eval_sep Q bs\<^sub>3' (mem t)" using assms(3,5,7) by blast
+  let ?bs\<^sub>3 = "bits_minus bs\<^sub>3' bs\<^sub>2"
+  have "eval_sep Q ?bs\<^sub>3 (mem t)" and  "dom ?bs\<^sub>3 \<inter> dom ?bs\<^sub>4 = {}"
+  proof -
+    show "dom ?bs\<^sub>3 \<inter> dom ?bs\<^sub>4 = {}" unfolding bits_minus_def dom_def by auto
+    show "eval_sep Q ?bs\<^sub>3 (mem t)"
+    proof -
+      { fix s bs
+        assume "eval_sep R bs (mem s)"
+        have "\<not> bs x" using assms(2,1,3,6)
+        unfolding condition_def mem_eq_def dom_def }
+      hence "x \<notin> dom bs\<^sub>2" using assms(4) unfolding dom_def by auto
+      thus ?thesis using 2 unfolding dom_def bits_minus_def assms(1) by auto
+    qed
+  qed  
+  with 1 and that show ?thesis by auto
+qed
+
+lemma frame_rule_particular_case:
+  fixes x v
+  defines "Q \<equiv> x \<mapsto> v"
   assumes main:"\<Turnstile>\<^sub>t\<^sub>r {to_assn P} c {to_assn Q}" and  cond:"condition R c" 
   shows "\<Turnstile>\<^sub>t\<^sub>r {to_assn (P * R)} c {to_assn (Q * R)}" using assms
 proof -(*
@@ -99,9 +143,12 @@ proof -(*
     obtain bs\<^sub>3 where 9:"eval_sep P bs\<^sub>1 (mem s)  \<longrightarrow> eval_sep Q bs\<^sub>3 (mem t)"
       by (metis 2 big_to_small_tr hoare_valid_tr_def main to_assn_def)
     have "eval_sep Q bs\<^sub>3 (mem t)" by (simp add: 7 9)
-    obtain bs\<^sub>4 where 12:"dom bs\<^sub>4 \<inter> dom bs\<^sub>2 = {}" and 14:"eval_sep Q bs\<^sub>4 (mem t)" using l4 7 8 9 2 4 6 cond by blast
+    have 10:"\<And> s t bs\<^sub>1 bs\<^sub>2 . \<lbrakk>eval_sep P bs\<^sub>1 (mem s); (Some c, s) \<Rightarrow>\<^sub>t\<^sub>r t\<rbrakk> \<Longrightarrow> \<exists> bs\<^sub>3 . eval_sep Q bs\<^sub>3 (mem t)"
+      by (metis big_to_small_tr hoare_valid_tr_def main to_assn_def) 
+    obtain bs' bs\<^sub>4 where 12:"eval_sep Q bs\<^sub>4 (mem t)" and "eval_sep R bs' (mem t)" and "dom bs\<^sub>4 \<inter> dom bs' = {}"
+      using assms(1) l5 cond 10 8 7 6 2
     obtain bs' where "bs' = join bs\<^sub>4 bs\<^sub>2" by simp
-    with 4 14 12 have "to_assn (Q * R) t" using to_assn_def by auto 
+    with 4 12 have "to_assn (Q * R) t" using to_assn_def by auto 
   }
   thus ?thesis by (metis hoare_valid_tr_def small_to_big_tr) 
 
