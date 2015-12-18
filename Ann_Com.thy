@@ -16,11 +16,6 @@ datatype com =
   While "newstate \<Rightarrow> bool" assn com    ("WHILE _ INV _ DO _ OD")|
   Wait "newstate \<Rightarrow> bool"              ("WAIT _ END")
 
-fun list :: "newstate \<Rightarrow> (nat list) \<Rightarrow> nat \<Rightarrow> bool" where 
-"list s [] i = (i = 0)"|
-"list s (x#xs) i = ((mem s) i = x \<and> list s xs ((mem s) (i + 1)))"
-
-
 (*
 fun reach_step::"newstate \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
 "reach_step s 0 i j = (i = j)"|

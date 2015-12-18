@@ -28,6 +28,10 @@ abbreviation assign3 where
 abbreviation assign4 where
 "assign4 \<equiv> BASIC (\<lambda>s. State (mem s) ((vars s)(i := (vars s) k)))"
 
+fun list :: "newstate \<Rightarrow> (nat list) \<Rightarrow> nat \<Rightarrow> bool" where 
+"list s [] a = (a = 0)"|
+"list s (x#xs) a = (odd a \<and> (mem s) a = x \<and> ((mem s) (a + 1)) \<noteq> a \<and>list s xs ((mem s) (a + 1)))"
+
 definition reach1 :: "newstate \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
   "reach1 s p q \<equiv> ((mem s) (p + 1)) = q"
 
@@ -75,9 +79,17 @@ using assms
 by (smt a1 a3 fun_upd_apply l2 l5 local.inv_def newstate.sel(1) newstate.sel(2)) 
 
 lemma l7:
-  assumes "list s \<alpha> a1" and "(mem s) a2 = v" and "(mem s) (a2 + 1) = a1"
+  assumes "list s \<alpha> a1" and "odd a2" and "(mem s) a2 = v" and "(mem s) (a2 + 1) = a1"
   shows "list s (v#\<alpha>) a2" using assms
-by (induct \<alpha>) simp_all
+proof (induct \<alpha>, simp_all)
+  assume "a1 = 0" and "mem s (Suc a2) = 0" and "list s \<alpha> 0" and "odd a2"
+  thus "0 < a2" by (simp add: odd_pos)
+next
+  fix a \<alpha>'
+  assume "(list s \<alpha>' a1 \<Longrightarrow> a1 \<noteq> a2)" and "odd a1" and "mem s a1 = a" and "mem s (Suc a1) \<noteq> a1" and "list s \<alpha>' (mem s (Suc a1))" and 
+    "mem s (Suc a2) = a1" and "list s \<alpha> a1" and "odd a2" and "mem s a2 = v"
+  thus "a1 \<noteq> a2" by blast
+
 
 (*lemma l8:
   assumes "list s \<alpha> addr" and "\<alpha> \<noteq> []"
@@ -87,31 +99,26 @@ by (induct \<alpha>) simp_all
     case (Cons x xs) thus ?case nitpick
     apply (induct xs) 
   *)
-    
+
 lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. \<exists>\<alpha> \<beta>. (\<alpha> \<noteq> []) \<and> (list s \<alpha> ((vars s) i)) \<and> (list s \<beta> ((vars s) j)) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>))
   \<and> (\<forall> v . (reach s ((vars s) i) v) \<and> (reach s ((vars s) j) v) \<longrightarrow> v = 0)} 
-  BASIC (\<lambda> s . State (mem s) ((vars s)(k := ((mem s) (((vars s) i) + 1))))) 
+  BASIC (\<lambda> s . State (mem s) ((vars s)(k := ((mem s) (((vars s) i) + 1)))))
     {\<lambda>s. \<exists>\<alpha> \<beta>. (\<alpha> \<noteq> []) \<and> (list s \<alpha> ((vars s) i)) \<and> (list s \<beta> ((vars s) j)) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>))
-  \<and> (\<forall> v . (reach s ((vars s) i) v) \<and> (reach s ((vars s) j) v) \<longrightarrow> v = 0) \<and> list s (tl \<alpha>) ((vars s) k)}" print_term_bindings
+  \<and> (\<forall> v . (reach s ((vars s) i) v) \<and> (reach s ((vars s) j) v) \<longrightarrow> v = 0) \<and> list s (tl \<alpha>) ((vars s) k) }"
 proof (rule Basic, clarify)
     fix s \<alpha> \<beta>
-    assume 0:"\<alpha> \<noteq> []" and 1:"list s \<alpha> (vars s i)" and 2:"list s \<beta> (vars s j)" and 3:"rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>" and 4:"\<forall>v. reach s (vars s i) v \<and> reach s (vars s j) v \<longrightarrow> v = 0"
-    hence 5:"(\<alpha> \<noteq> []) \<and> list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) \<alpha> (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) i) \<and>
-      list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) \<beta> (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) j) \<and>
-         rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>" by (simp add: 1 2 a1 a3 l2) 
-    hence 6:"(\<forall>v. reach (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) i) v \<and>
-         reach (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) j) v \<longrightarrow>
-         v = 0)" by (metis "4" a1 a3 fun_upd_apply l5 newstate.sel(1) newstate.sel(2))
-    hence "list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (tl \<alpha>) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) k)"
+    def s' \<equiv> "State (mem s) ((vars s)(k := ((mem s) (((vars s) i) + 1))))"
+    assume 0:"\<alpha> \<noteq> []" and 1:"list s \<alpha> (vars s i)" and 2:"list s \<beta> (vars s j)" and 3:"rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>" 
+    and 4:"\<forall>v. reach s (vars s i) v \<and> reach s (vars s j) v \<longrightarrow> v = 0"
+    hence 5:"(\<alpha> \<noteq> []) \<and> list s' \<alpha> (vars s' i) \<and>
+      list s' \<beta> ((vars s') j) \<and> rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>" by (simp add: 1 2 a1 a3 l2 s'_def) 
+    have 6:"(\<forall>v. reach s' (vars s' i) v \<and>
+         reach s' (vars s' j) v \<longrightarrow> v = 0)" by (metis "4" a1 a3 fun_upd_apply l5 newstate.sel(1) newstate.sel(2) s'_def)
+    have 7:"list s' (tl \<alpha>) (vars s' k)" unfolding s'_def
       by (metis 0 1 Ann_Com.list.simps(2) fun_upd_apply l2 list.collapse newstate.sel(1) newstate.sel(2))
-    thus "\<exists>\<alpha> \<beta>. (\<alpha> \<noteq> []) \<and> list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) \<alpha> (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) i) \<and>
-                    list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) \<beta> (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) j) \<and>
-                    rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta> \<and>
-                    (\<forall>v. reach (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) i) v \<and>
-                         reach (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) j) v \<longrightarrow>
-                         v = 0) \<and>
-                    list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (tl \<alpha>) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) k)"
-    using 5 6 by blast
+    show "\<exists>\<alpha> \<beta>. \<alpha> \<noteq> [] \<and> list s' \<alpha> (vars s' i) \<and> list s' \<beta> (vars s' j) \<and> rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta> \<and>
+      (\<forall>v. reach s' (vars s' i) v \<and> reach s' (vars s' j) v \<longrightarrow> v = 0) \<and> list s' (tl \<alpha>) (vars s' k)"
+    using 5 6 7 unfolding s'_def by blast
 qed
 
 lemma l10:
@@ -172,9 +179,20 @@ lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. \<exists>\<alpha> \<beta>. (\<a
   \<and> (\<forall> v . (reach s ((vars s) k) v) \<and> (reach s ((vars s) i) v) \<longrightarrow> v = 0)}"
 proof (rule Basic, clarify)
   fix s \<alpha> \<beta>
-  assume 0:"\<alpha> \<noteq> []" and 1:"list s \<alpha> (vars s i)" and 2:"list s \<beta> (vars s j)" and 3:"rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>" and 4:"\<forall>v. reach s ((vars s) i) v \<and> reach s ((vars s) j) v \<longrightarrow> v = 0" and 5:"list s (tl \<alpha>) ((vars s) k)"
-  hence 6:"list (State ((mem s)((((vars s) i) + 1) := vars s j)) (vars s)) \<beta> (vars (State ((mem s)((((vars s) i) + 1) := vars s j)) (vars s)) j)" using l9
-  by (metis old.nat.distinct(2))
+  def s' \<equiv> "State ((mem s)(((vars s) i + 1) := (vars s) j)) (vars s)"
+  assume 0:"\<alpha> \<noteq> []" and 1:"list s \<alpha> (vars s i)" and 2:"list s \<beta> (vars s j)" and 3:"rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>"
+    and 4:"\<forall>v. reach s ((vars s) i) v \<and> reach s ((vars s) j) v \<longrightarrow> v = 0" and 5:"list s (tl \<alpha>) ((vars s) k)"
+  have "odd (vars s i)" using 0 1 using list.elims(2) by blast 
+  have "odd (vars s j) \<or> (vars s j) = 0" using 2
+  hence 6:"list s' \<beta> (vars s' j)"
+  proof-
+  {
+    assume "odd (
+ using 2 4 l9 unfolding s'_def
+  have "odd (vars s' i) \<and> (mem s') (vars s' i) = hd(\<alpha>)" unfolding s'_def (*
+    by (metis 0 1 even_plus_one_iff fun_upd_other list.elims(2) list.sel(1) newstate.sel(1) newstate.sel(2))
+  hence 7:"list s' (hd(\<alpha>)#\<beta>) (vars s' i)" using 6 by (simp add: s'_def)
+  have 7:"list s' (tl \<alpha>) (vars s' k)" using 5 unfolding s'_def*)
 
 qed
 
