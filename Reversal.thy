@@ -28,6 +28,12 @@ abbreviation assign3 where
 abbreviation assign4 where
 "assign4 \<equiv> BASIC (\<lambda>s. State (mem s) ((vars s)(i := (vars s) k)))"
 
+definition reach1 :: "newstate \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
+  "reach1 s p q \<equiv> ((mem s) (p + 1)) = q"
+
+definition reach :: "newstate \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
+  "reach s x y \<equiv> star (reach1 s) x y"
+
 abbreviation pre0::"assn" where "pre0 \<equiv> \<lambda>s. \<exists>\<alpha> \<beta>. ((vars s) i \<noteq> 0) \<and> ((vars s) j = 0) \<and> (list s  \<alpha>\<^sub>0 ((vars s) i)) \<and>  (list s \<alpha> ((vars s) i)) \<and> 
   (list s \<beta> 0) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>)) \<and> (\<forall>k::string. (reach s ((vars s) i) ((vars s) k)) \<and> (reach s ((vars s) j) ((vars s) k)) \<longrightarrow> ((vars s) k = 0))"
 
@@ -52,17 +58,14 @@ lemma l3:
   shows "list s' l ((vars s') v)" using assms
 by (metis l2) 
 
-lemma l4:
-  fixes s s' l v
-  assumes "mem s = mem s'"
-  shows "reach_step s n addr v = reach_step s' n addr v" using assms
-apply (induct rule:reach_step.induct) apply auto done
-
 lemma l5:
-  fixes s s' l v
+  fixes s s' v addr
   assumes "mem s = mem s'"
-  shows "reach s addr v = reach s' addr v" using assms
-by (metis l4 reach_def)
+  shows "reach s addr v = reach s' addr v" 
+proof - 
+  have "\<And> p q . reach1 s p q = reach1 s' p q" unfolding reach1_def using assms by simp
+  thus ?thesis unfolding reach_def by presburger
+qed
 
 lemma l6:
   fixes s v
@@ -84,16 +87,96 @@ by (induct \<alpha>) simp_all
     case (Cons x xs) thus ?case nitpick
     apply (induct xs) 
   *)
+    
+lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. \<exists>\<alpha> \<beta>. (\<alpha> \<noteq> []) \<and> (list s \<alpha> ((vars s) i)) \<and> (list s \<beta> ((vars s) j)) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>))
+  \<and> (\<forall> v . (reach s ((vars s) i) v) \<and> (reach s ((vars s) j) v) \<longrightarrow> v = 0)} 
+  BASIC (\<lambda> s . State (mem s) ((vars s)(k := ((mem s) (((vars s) i) + 1))))) 
+    {\<lambda>s. \<exists>\<alpha> \<beta>. (\<alpha> \<noteq> []) \<and> (list s \<alpha> ((vars s) i)) \<and> (list s \<beta> ((vars s) j)) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>))
+  \<and> (\<forall> v . (reach s ((vars s) i) v) \<and> (reach s ((vars s) j) v) \<longrightarrow> v = 0) \<and> list s (tl \<alpha>) ((vars s) k)}" print_term_bindings
+proof (rule Basic, clarify)
+    fix s \<alpha> \<beta>
+    assume 0:"\<alpha> \<noteq> []" and 1:"list s \<alpha> (vars s i)" and 2:"list s \<beta> (vars s j)" and 3:"rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>" and 4:"\<forall>v. reach s (vars s i) v \<and> reach s (vars s j) v \<longrightarrow> v = 0"
+    hence 5:"(\<alpha> \<noteq> []) \<and> list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) \<alpha> (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) i) \<and>
+      list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) \<beta> (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) j) \<and>
+         rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>" by (simp add: 1 2 a1 a3 l2) 
+    hence 6:"(\<forall>v. reach (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) i) v \<and>
+         reach (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) j) v \<longrightarrow>
+         v = 0)" by (metis "4" a1 a3 fun_upd_apply l5 newstate.sel(1) newstate.sel(2))
+    hence "list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (tl \<alpha>) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) k)"
+      by (metis 0 1 Ann_Com.list.simps(2) fun_upd_apply l2 list.collapse newstate.sel(1) newstate.sel(2))
+    thus "\<exists>\<alpha> \<beta>. (\<alpha> \<noteq> []) \<and> list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) \<alpha> (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) i) \<and>
+                    list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) \<beta> (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) j) \<and>
+                    rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta> \<and>
+                    (\<forall>v. reach (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) i) v \<and>
+                         reach (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) j) v \<longrightarrow>
+                         v = 0) \<and>
+                    list (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) (tl \<alpha>) (vars (State (mem s) ((vars s)(k := mem s (vars s i + 1)))) k)"
+    using 5 6 by blast
+qed
 
-(*lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> inv s \<and> list s \<alpha> ((vars s) i) \<and> list s \<beta> ((vars s) j)} BASIC (\<lambda> s . State (mem s) ((vars s)(k := ((mem s) (((vars s) i) + 1))))) 
-  {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> inv s \<and> list s (tl \<alpha>) ((vars s) k) \<and> list s \<alpha> ((vars s) i) \<and> list s \<beta> ((vars s) j) \<and> ((vars s) k) \<noteq> ((vars s) i) + 1}" 
-apply (rule Basic)
-by (smt Ann_Com.list.simps(2) a1 a3 fun_upd_apply l2 l6 list.collapse newstate.sel(1) newstate.sel(2)) 
+lemma l10:
+  assumes  "\<And> v . reach s p v \<Longrightarrow> odd v"
+  shows  "\<And> v . reach s ((mem s) (p + 1)) v \<Longrightarrow> odd v"
+  using assms 
+  proof -
+  fix v 
+  assume "reach s ((mem s) (p + 1)) v" 
+  thus "odd v" using assms unfolding reach_def thm star.induct
+  proof (induct "((mem s) (p + 1))" v rule: star.induct[where r="reach1 s"])
+    case refl thus ?case
+      using reach1_def by blast 
+    next
+    print_cases
+    case step 
+    from step.hyps(1,2) step.prems show ?case
+      by (meson reach1_def star.simps) 
+  qed
+qed
 
-lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> inv s \<and> list s (tl \<alpha>) ((vars s) k) \<and> list s \<alpha> ((vars s) i) \<and> list s \<beta> ((vars s) j)} 
+lemma l9:
+  fixes x s l
+  assumes "\<And> v . reach s p v \<Longrightarrow> (v \<noteq> q)" 
+  and "s' = State ((mem s)((q + 1) := x)) (vars s)"
+  and "list s l p"
+  and "odd p" and "odd q"
+  and "\<And> v . reach s p v \<Longrightarrow> odd v"
+  shows "list s' l p" using assms 
+proof (induct l arbitrary: p)
+  case Nil thus ?case by auto
+next
+  case (Cons x xs)
+  have "list s' xs ((mem s)(p + 1))"
+  proof -
+    let ?p'= "(mem s)(p + 1)"
+    have "list s xs ?p'" 
+      using Cons.prems(3) by auto
+    moreover have "\<And> v . reach s ?p' v \<Longrightarrow> (v \<noteq> q)"
+      by (metis Cons.prems(1) reach1_def reach_def star.simps) 
+    moreover have "odd ?p'" 
+      by (metis Cons.prems(6) reach1_def reach_def star.simps) 
+    moreover have "\<And> v . reach s ?p' v \<Longrightarrow> odd v" using l10
+      using Cons.prems(6) by blast 
+    ultimately
+    show ?thesis using Cons.hyps assms(2) assms(5) by smt
+  qed
+  moreover have "((mem s) p) = x"
+    by (metis Ann_Com.list.simps(2) Cons.prems(3)) 
+  ultimately show ?case
+  by (metis (no_types, lifting) Ann_Com.list.simps(2) Cons.prems(1) Cons.prems(4) add_diff_cancel_right' assms(2) assms(5) fun_upd_apply newstate.sel(1) odd_even_add odd_one reach_def star.refl) 
+qed
+
+lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda>s. \<exists>\<alpha> \<beta>. (\<alpha> \<noteq> []) \<and> (list s \<alpha> ((vars s) i)) \<and> (list s \<beta> ((vars s) j)) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>))
+  \<and> (\<forall> v . (reach s ((vars s) i) v) \<and> (reach s ((vars s) j) v) \<longrightarrow> v = 0) \<and> list s (tl \<alpha>) ((vars s) k)} 
   BASIC (\<lambda>s. State ((mem s)(((vars s) i + 1) := (vars s) j)) (vars s)) 
-  {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> list s (tl \<alpha>) ((vars s) k)}"
-apply (rule Basic) nitpick[show_consts]
+  {\<lambda>s. \<exists>\<alpha> \<beta>. (list s \<alpha> ((vars s) k)) \<and> (list s \<beta> ((vars s) i)) \<and> (rev \<alpha>\<^sub>0 = (append (rev \<alpha>) \<beta>))
+  \<and> (\<forall> v . (reach s ((vars s) k) v) \<and> (reach s ((vars s) i) v) \<longrightarrow> v = 0)}"
+proof (rule Basic, clarify)
+  fix s \<alpha> \<beta>
+  assume 0:"\<alpha> \<noteq> []" and 1:"list s \<alpha> (vars s i)" and 2:"list s \<beta> (vars s j)" and 3:"rev \<alpha>\<^sub>0 = rev \<alpha> @ \<beta>" and 4:"\<forall>v. reach s ((vars s) i) v \<and> reach s ((vars s) j) v \<longrightarrow> v = 0" and 5:"list s (tl \<alpha>) ((vars s) k)"
+  hence 6:"list (State ((mem s)((((vars s) i) + 1) := vars s j)) (vars s)) \<beta> (vars (State ((mem s)((((vars s) i) + 1) := vars s j)) (vars s)) j)" using l9
+  by (metis old.nat.distinct(2))
+
+qed
 
 lemma "\<turnstile>\<^sub>t\<^sub>r {\<lambda> s . \<alpha> \<noteq> [] \<and> ((vars s) i \<noteq> 0) \<and> inv s \<and> list s (tl \<alpha>) ((vars s) k) \<and> list s \<alpha> ((vars s) i) \<and> list s \<beta> ((vars s) j)} 
   BASIC (\<lambda>s. State ((mem s)((mem s) ((vars s) i + 1) := (vars s) j)) (vars s)) 
