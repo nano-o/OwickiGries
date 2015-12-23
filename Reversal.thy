@@ -30,7 +30,7 @@ abbreviation assign4 where
 
 fun list :: "newstate \<Rightarrow> (nat list) \<Rightarrow> nat \<Rightarrow> bool" where 
 "list s [] a = (a = 0)"|
-"list s (x#xs) a = (odd a \<and> (mem s) a = x \<and> ((mem s) (a + 1)) \<noteq> a \<and>list s xs ((mem s) (a + 1)))"
+"list s (x#xs) a = (odd a \<and> (mem s) a = x \<and> ((mem s) (a + 1)) \<noteq> a \<and> list s xs ((mem s) (a + 1)))"
 
 definition reach1 :: "newstate \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
   "reach1 s p q \<equiv> ((mem s) (p + 1)) = q"
