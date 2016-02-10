@@ -16,15 +16,6 @@ datatype com =
   While "newstate \<Rightarrow> bool" assn com    ("WHILE _ INV _ DO _ OD")|
   Wait "newstate \<Rightarrow> bool"              ("WAIT _ END")
 
-(*
-fun reach_step::"newstate \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
-"reach_step s 0 i j = (i = j)"|
-"reach_step s (Suc n) i j = (\<exists> k. ((mem s) (i + 1) = k) \<and> (reach_step s n k j))"
-
-definition reach::"newstate \<Rightarrow> address \<Rightarrow> nat \<Rightarrow> bool" where
-  "reach s i j \<equiv> (\<exists>n \<ge> 0. reach_step s n i j)"
-*)
-
 datatype acom =
   ABasic assn "newstate \<Rightarrow> newstate"    ("{_} BASIC _ ")   |
   ASeq   acom acom   ("_;; _") |

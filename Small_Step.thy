@@ -132,13 +132,13 @@ inductive_cases BTWhileE[elim]: "(Some WHILE b INV I DO c OD, s) \<Rightarrow>\<
 inductive_cases BTWaitE[elim]: "(Some WAIT b END, s) \<Rightarrow>\<^sub>t\<^sub>r t"
 
 lemma assign_simp:
-  "(Some (ABasic P f), s) \<Rightarrow> s' <-> (s' = (f s))"
+  "(Some (ABasic P f), s) \<Rightarrow> s' = (s' = (f s))"
 using big_step.Basic by auto
  
 
 text {* An example combining rule inversion and derivations *}
 lemma Seq_assoc:
-  "(Some (c1;; c2);; c3, s) \<Rightarrow> s' <-> (Some c1;; (c2;; c3), s) \<Rightarrow> s'"
+  "(Some (c1;; c2);; c3, s) \<Rightarrow> s' = (Some c1;; (c2;; c3), s) \<Rightarrow> s'"
 proof
   assume "(Some (c1;; c2);; c3, s) \<Rightarrow> s'"
   then obtain s1 s2 where
@@ -225,7 +225,7 @@ proof (induct c s "(None::(acom option))" t rule:star_induct)
 using none_final(2) by blast
 next
   case step thus ?case using deterministic
-    by (metis (no_types, hide_lams) PairE none_final(2) star.simps)
+by (metis none_final(2) star.cases star.step)
 qed
 
 lemma star_seq2:
@@ -398,7 +398,8 @@ using assms
 proof (induct "(c,s)" "(None::(com option), t)" arbitrary:c s rule:star.induct) 
   case refl thus ?case using none_final_tr(2) by blast 
 next
-  case step thus ?case using tr_deterministic by (metis (no_types, lifting) case_prodE none_final_tr(2) split_curry star.simps)
+  case step thus ?case using tr_deterministic
+by (metis none_final_tr(2) prod.collapse star.simps star.step) 
 qed
 
 lemma star_seq2_tr:

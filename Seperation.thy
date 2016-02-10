@@ -88,6 +88,7 @@ lemma l4':
 using assms
 proof(induct c arbitrary:P Q)
   case (Cond b c1 c2) thus ?case
+  oops
 
 lemma l5:
   fixes x v Q P R  c
@@ -113,8 +114,8 @@ proof -
       { fix s bs
         assume "eval_sep R bs (mem s)"
         have "\<not> bs x" using assms(2,1,3,6)
-        unfolding condition_def mem_eq_def dom_def }
-      hence "x \<notin> dom bs\<^sub>2" using assms(4) unfolding dom_def by auto
+        unfolding condition_def mem_eq_def dom_def sorry }
+      hence "x \<notin> dom bs\<^sub>2" using assms(4) unfolding dom_def sorry
       thus ?thesis using 2 unfolding dom_def bits_minus_def assms(1) by auto
     qed
   qed  

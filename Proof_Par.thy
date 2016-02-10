@@ -178,7 +178,7 @@ lemma interfree_step_post:
       case (ABasic P f s)
       hence 3:"{(P, Basic f)} = atomics (ABasic P f)" by simp
       with ABasic.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} (Basic f) {Q}"
-      by (metis (no_types, lifting) None hoare_valid_tr_def interfree.simps(2) singletonI splitD)
+        by (metis (no_types, lifting) None case_prodD hoare_valid_tr_def interfree.simps(2) singletonI)
       have 5:"Q s \<and> P s" using None ABasic.prems(2,3) by auto
       show ?case using 4 5 None hoare_valid_tr_def by auto
     qed (auto simp add:None) 
@@ -192,8 +192,8 @@ lemma interfree_step_post:
     case (ABasic P f s)
       hence 3:"{(P, Basic f)} = atomics (ABasic P f)" by simp
       with ABasic.prems(1) have 4:"\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. Q s \<and> P s} (Basic f) {Q} \<and> 
-        (\<forall>R \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. R s \<and> P s} (Basic f) {R})" 
-        by (metis (mono_tags, lifting) Some hoare_valid_tr_def interfree.simps(3) singletonI splitD)
+        (\<forall>R \<in> (assertions u).\<Turnstile>\<^sub>t\<^sub>r {\<lambda>s. R s \<and> P s} (Basic f) {R})"
+          by (metis (mono_tags, lifting) Some case_prodD hoare_valid_tr_def interfree.simps(3) singletonI) 
       have 5:"pre u s \<and> P s" using Some ABasic.prems(2,3) by auto
       have 6:"pre u \<in> (assertions u)" by (simp add: assertions_inclusion) 
       show ?case by (smt 4 5 6 Some hoare_valid_tr_def option.simps(5) small_step_tr.Basic star_step1)

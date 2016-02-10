@@ -30,7 +30,10 @@ abbreviation assign4 where
 
 fun list :: "newstate \<Rightarrow> (nat list) \<Rightarrow> nat \<Rightarrow> bool" where 
 "list s [] a = (a = 0)"|
-"list s (x#xs) a = (odd a \<and> (mem s) a = x \<and> ((mem s) (a + 1)) \<noteq> a \<and> list s xs ((mem s) (a + 1)))"
+"list s (x#xs) a = (odd a \<and> (mem s) a = x \<and> list s xs ((mem s) (a + 1)))"
+
+lemma assumes "list s xs a" and "xs \<noteq> []" shows "((mem s) (a + 1)) \<noteq> a"
+sorry
 
 definition reach1 :: "newstate \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> bool" where
   "reach1 s p q \<equiv> ((mem s) (p + 1)) = q"
@@ -81,14 +84,7 @@ by (smt a1 a3 fun_upd_apply l2 l5 local.inv_def newstate.sel(1) newstate.sel(2))
 lemma l7:
   assumes "list s \<alpha> a1" and "odd a2" and "(mem s) a2 = v" and "(mem s) (a2 + 1) = a1"
   shows "list s (v#\<alpha>) a2" using assms
-proof (induct \<alpha>, simp_all)
-  assume "a1 = 0" and "mem s (Suc a2) = 0" and "list s \<alpha> 0" and "odd a2"
-  thus "0 < a2" by (simp add: odd_pos)
-next
-  fix a \<alpha>'
-  assume "(list s \<alpha>' a1 \<Longrightarrow> a1 \<noteq> a2)" and "odd a1" and "mem s a1 = a" and "mem s (Suc a1) \<noteq> a1" and "list s \<alpha>' (mem s (Suc a1))" and 
-    "mem s (Suc a2) = a1" and "list s \<alpha> a1" and "odd a2" and "mem s a2 = v"
-  thus "a1 \<noteq> a2" by blast
+by (induct \<alpha>, simp_all)
 
 
 (*lemma l8:
