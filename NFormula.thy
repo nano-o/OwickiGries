@@ -76,7 +76,7 @@ fun getAddr::"formula \<Rightarrow> newstate \<Rightarrow> nat set" where
 "getAddr (Points_to a1 a2) s = {addr. addr = aval a1 (vars s)}"|
 "getAddr (Conj f1 f2) s = (getAddr f1 s) \<union> (getAddr f2 s)"
 
-(*fun fVal::"formula \<Rightarrow> active_addrs \<Rightarrow> newstate \<Rightarrow> bool" where
+fun fVal::"formula \<Rightarrow> active_addrs \<Rightarrow> newstate \<Rightarrow> bool" where
 "fVal (Bc v) bs s = v"|
 "fVal (Not f) bs s = (\<not>fVal f bs s)"|
 "fVal (And f1 f2) bs s = ((fVal f1 bs s) \<and> (fVal f2 bs s))"|
@@ -92,6 +92,6 @@ fun getAddr::"formula \<Rightarrow> newstate \<Rightarrow> nat set" where
   (\<forall>addr \<in> (getAddr f1 s). (bs addr)) \<and> (\<forall>addr \<in> (getAddr f2 s). (bs addr)) \<and> (fVal f1 bs s) \<and> (fVal f2 bs s))"
 
 definition condition :: "formula \<Rightarrow> com \<Rightarrow> bool"
-  where "condition f c \<equiv> \<forall> bs s s' . fVal f bs s \<and> (Some c, s) \<Rightarrow>\<^sub>t\<^sub>r s' \<longrightarrow> fVal f bs s'"*)
+  where "condition f c \<equiv> \<forall> bs s s' . fVal f bs s \<and> (Some c, s) \<Rightarrow>\<^sub>t\<^sub>r s' \<longrightarrow> fVal f bs s'"
 
 end

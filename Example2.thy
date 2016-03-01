@@ -34,8 +34,10 @@ Goal: \<turnstile>\<^sub>P {f0 = 0 /\ f1 = 0 /\ d0 = 0 /\ d1 = 0} Parallel Ts {f
 definition Or::"bexp \<Rightarrow> bexp \<Rightarrow> bexp" where "Or b1 b2 \<equiv> Not (And (Not b1) (Not b2))"
 definition Equal::"aexp \<Rightarrow> aexp \<Rightarrow> bexp" where "Equal a1 a2 \<equiv> And (Not (Less a1 a2)) (Not (Less a2 a1))"
 
-lemma or_bval:"bval (Or b1 b2) s = (bval b1 s \<or> bval b2 s)" by (metis Or_def bval.simps(2) bval_And_if)
-lemma equal_bval:"bval (Equal a1 a2) s = (aval a1 s = aval a2 s)" by (smt Equal_def bval.simps(2) bval.simps(4) bval_And_if) 
+lemma or_bval:"bval (Or b1 b2) s = (bval b1 s \<or> bval b2 s)"
+  by (metis Or_def bval.simps(2) bval_And_if)
+lemma equal_bval:"bval (Equal a1 a2) s = (aval a1 s = aval a2 s)"
+  using Equal_def by auto 
 
 abbreviation pre10 :: "assn" where "pre10 \<equiv> \<lambda>s. s ''f0'' = 0 \<and> s ''d0'' = 0  \<and> (s ''d1'' = 2 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0)) 
   \<and> (s ''d1'' = 3 \<longrightarrow> (s ''f1'' = 1 \<and> s ''t'' = 0))"
